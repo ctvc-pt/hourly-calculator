@@ -12,31 +12,31 @@ const HourlyCalculator = () => {
   const [editingIAS, setEditingIAS] = useState(false);
   const [tempIAS, setTempIAS] = useState(DEFAULT_IAS.toString());
   const IASH = IAS / 176; // IAS Hourly - Approximate hourly equivalent (average work hours per month)
-  
+
   // State for input values
   const [age, setAge] = useState(30);
-  const [isExPresident, setIsExPresident] = useState(false);
+  const [isFormerChair, setisFormerChair] = useState(false);
   const [isIntern, setIsIntern] = useState(false);
   const [isMember, setIsMember] = useState(false);
   const [balance, setBalance] = useState(0);
   const [academicQualification, setAcademicQualification] = useState("none");
   const [formulaStyle, setFormulaStyle] = useState("mathjax"); // "ascii" or "mathjax"
-  
+
   // State for additional pricing tiers
   const [serviceType, setServiceType] = useState("internal"); // "internal" or "commercial"
   const [isStrategic, setIsStrategic] = useState(false);
   const [includeVAT, setIncludeVAT] = useState(true); // Default to true
-  
+
   // Effect to set VAT to true when commercial is selected
   useEffect(() => {
     if (serviceType === "commercial") {
       setIncludeVAT(true);
     }
   }, [serviceType]);
-  
+
   // State for result
   const [hourlyRate, setHourlyRate] = useState(0);
-  const [calculationSteps, setCalculationSteps] = useState([]);
+  const [calculationSteps, setCalculationSteps] = useState<string[]>([]);
   const [tierRates, setTierRates] = useState({
     base: 0,
     internal: 0,
@@ -45,12 +45,12 @@ const HourlyCalculator = () => {
     commercialVAT: 0,
     commercialStrategicVAT: 0
   });
-  
+
   // Refs for MathJax
   const mathJaxRef = useRef(null);
 
   // Handle IAS value change
-  const handleIASChange = (e) => {
+  const handleIASChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTempIAS(e.target.value);
   };
 
@@ -85,7 +85,7 @@ const HourlyCalculator = () => {
         }
       };
       document.body.appendChild(script);
-      
+
       return () => {
         if (document.body.contains(script)) {
           document.body.removeChild(script);
@@ -95,46 +95,37 @@ const HourlyCalculator = () => {
   }, [formulaStyle]);
 
   // Continuous seniority growth function with a cap at MAX_SENIORITY
-  const calculateSeniorityBonus = (seniority) => {
-    // Cap seniority at MAX_SENIORITY years
+  const calculateSeniorityBonus = React.useCallback((seniority: number): number => {
     const cappedSeniority = Math.min(seniority, MAX_SENIORITY);
-    
-    // Define the seniority function f(s) components
     const earlyCareerComponent = 4 * (1 - Math.exp(-0.15 * cappedSeniority));
     const midCareerComponent = 0.08 * Math.max(0, cappedSeniority - 10) * Math.exp(-0.1 * Math.max(0, cappedSeniority - 10));
     const lateCareerComponent = 0.02 * Math.max(0, cappedSeniority - 15);
-    
-    // Use a continuous function that approximates:
-    // - First years: higher growth (approx 15% IASH per year)
-    // - Middle years: medium growth (approx 8% IASH per year) 
-    // - Later years: minimal growth (approx 2% IASH per year)
-    return IASH * (
-      earlyCareerComponent + midCareerComponent + lateCareerComponent
-    );
-  };
+
+    return IASH * (earlyCareerComponent + midCareerComponent + lateCareerComponent);
+  }, [IASH]);
 
   // Calculate hourly rate and steps
-  const calculateHourly = () => {
+  const calculateHourly = React.useCallback(() => {
+
     const steps = [];
-    
+
     // Calculate seniority (age - 23, minimum 0)
     const seniority = Math.max(0, age - 23);
-    const cappedSeniority = Math.min(seniority, MAX_SENIORITY);
-    
+
     if (seniority > MAX_SENIORITY) {
       steps.push(`Seniority: max(0, ${age} - 23) = ${seniority} years (capped at ${MAX_SENIORITY} years)`);
     } else {
       steps.push(`Seniority: max(0, ${age} - 23) = ${seniority} years`);
     }
-    
+
     // Base hourly calculation - now based on IAS
     const baseHourly = IASH * BASE_HOURLY_FACTOR;
     steps.push(`Base hourly rate: (${IAS.toFixed(2)}€ ÷ 176) × ${BASE_HOURLY_FACTOR} = ${IASH.toFixed(2)}€ × ${BASE_HOURLY_FACTOR} = ${baseHourly.toFixed(2)}€`);
     steps.push(`Note: ${BASE_HOURLY_FACTOR} factor chosen to make base hourly approximately 5€`);
-    
+
     // Apply seniority growth using the continuous function
     const seniorityBonus = calculateSeniorityBonus(seniority);
-    
+
     // Explain the seniority calculation
     let seniorityExplanation = "";
     if (seniority <= 1) {
@@ -148,31 +139,31 @@ const HourlyCalculator = () => {
     } else {
       seniorityExplanation = `Maximum seniority reached (capped at ${MAX_SENIORITY} years)`;
     }
-    
+
     steps.push(`Seniority bonus: ${seniorityBonus.toFixed(2)}€ (${seniorityExplanation})`);
-    
+
     let hourly = baseHourly + seniorityBonus;
     steps.push(`Base + Seniority: ${baseHourly.toFixed(2)}€ + ${seniorityBonus.toFixed(2)}€ = ${hourly.toFixed(2)}€`);
-    
+
     // Apply status modifiers
-    if (isExPresident) {
+    if (isFormerChair) {
       const oldHourly = hourly;
       hourly *= 1.10; // 10% boost
       steps.push(`Ex Board Chair bonus (10%): ${oldHourly.toFixed(2)}€ × 1.10 = ${hourly.toFixed(2)}€`);
     }
-    
+
     if (isIntern) {
       const oldHourly = hourly;
       hourly *= 0.50; // 50% penalty
       steps.push(`Intern penalty (50%): ${oldHourly.toFixed(2)}€ × 0.50 = ${hourly.toFixed(2)}€`);
     }
-    
+
     if (isMember) {
       const oldHourly = hourly;
       hourly *= 1.10; // 10% boost
       steps.push(`Member bonus (10%): ${oldHourly.toFixed(2)}€ × 1.10 = ${hourly.toFixed(2)}€`);
     }
-    
+
     // Apply balance modifier
     if (balance > 0) {
       // Up to 50% boost for balances up to 10,000
@@ -181,7 +172,7 @@ const HourlyCalculator = () => {
       hourly *= (1 + balanceBoost);
       steps.push(`Balance bonus (${(balanceBoost * 100).toFixed(2)}%): ${oldHourly.toFixed(2)}€ × ${(1 + balanceBoost).toFixed(2)} = ${hourly.toFixed(2)}€`);
     }
-    
+
     // Apply academic qualification modifier (non-cumulative)
     if (academicQualification === "phd") {
       const oldHourly = hourly;
@@ -196,12 +187,12 @@ const HourlyCalculator = () => {
       hourly *= 1.12; // 12% boost
       steps.push(`Bachelor's qualification bonus (12%): ${oldHourly.toFixed(2)}€ × 1.12 = ${hourly.toFixed(2)}€`);
     }
-    
+
     // Round to nearest quarter of a euro
     const oldHourly = hourly;
     hourly = Math.round(hourly * 4) / 4;
     steps.push(`Rounded to nearest 0.25€: ${oldHourly.toFixed(2)}€ → ${hourly.toFixed(2)}€`);
-    
+
     // Calculate additional tier rates
     const baseRate = hourly;
     const internalRate = baseRate;
@@ -209,7 +200,7 @@ const HourlyCalculator = () => {
     const commercialStrategicRate = commercialRate * 0.75; // -25% of commercial
     const commercialVATRate = commercialRate * (1 + VAT_RATE);
     const commercialStrategicVATRate = commercialStrategicRate * (1 + VAT_RATE);
-    
+
     setTierRates({
       base: baseRate,
       internal: internalRate,
@@ -218,17 +209,18 @@ const HourlyCalculator = () => {
       commercialVAT: commercialVATRate,
       commercialStrategicVAT: commercialStrategicVATRate
     });
-    
+
     setHourlyRate(hourly);
     setCalculationSteps(steps);
-    
+
     return hourly;
-  };
+  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, calculateSeniorityBonus]);
+
 
   // Calculate whenever inputs change
   useEffect(() => {
     calculateHourly();
-  }, [IAS, age, isExPresident, isIntern, isMember, balance, academicQualification]);
+  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, calculateHourly]);
 
   // Effect to render MathJax after the component updates
   useEffect(() => {
@@ -242,31 +234,31 @@ const HourlyCalculator = () => {
   for (let a = 23; a <= 65; a += 5) {
     // Calculate seniority
     const seniority = Math.max(0, a - 23);
-    
+
     // Base hourly calculation
     const baseHourly = IASH * BASE_HOURLY_FACTOR;
-    
+
     // Apply seniority growth
     const seniorityBonus = calculateSeniorityBonus(seniority);
-    
+
     // Calculate hourly rate
     let hourly = baseHourly + seniorityBonus;
-    
+
     // Round to nearest quarter
     hourly = Math.round(hourly * 4) / 4;
-    
+
     ageRangeData.push({ age: a, hourly: hourly });
   }
-  
+
   // Generate chart data for seniority curve visualization
-  const chartData = [];
+  const chartData: { seniority: number; bonus: number }[] = [];
   for (let i = 0; i <= MAX_SENIORITY + 10; i += 1) {
     chartData.push({
       seniority: i,
       bonus: calculateSeniorityBonus(i)
     });
   }
-  
+
   // MathJax formula
   const mathJaxFormula = `
     <div class="p-4 bg-gray-50 rounded">
@@ -298,7 +290,7 @@ const HourlyCalculator = () => {
       </div>
     </div>
   `;
-  
+
   // ASCII formula
   const asciiFormula = `
 HOURLY RATE CALCULATION FORMULA
@@ -395,7 +387,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
               <p className="text-sm text-gray-500">Hourly equivalent: IAS ÷ 176 = {IASH.toFixed(2)}€</p>
               <p className="text-sm text-gray-500">Base rate factor: {BASE_HOURLY_FACTOR} (creates a base hourly of ~5€)</p>
             </div>
-            
+
             <div>
               <label className="font-bold block mb-1">Age: {age}</label>
               <input
@@ -412,7 +404,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 {age > 23 + MAX_SENIORITY && ` (capped at ${MAX_SENIORITY} for calculations)`}
               </p>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <label className="font-bold">Intern</label>
               <input
@@ -421,7 +413,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 onChange={(e) => setIsIntern(e.target.checked)}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <label className="font-bold">Member</label>
               <input
@@ -430,16 +422,16 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 onChange={(e) => setIsMember(e.target.checked)}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <label className="font-bold">Ex Board Chair</label>
               <input
                 type="checkbox"
-                checked={isExPresident}
-                onChange={(e) => setIsExPresident(e.target.checked)}
+                checked={isFormerChair}
+                onChange={(e) => setisFormerChair(e.target.checked)}
               />
             </div>
-            
+
             <div>
               <label className="font-bold block mb-1">Balance: {balance}€</label>
               <input
@@ -455,12 +447,12 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 Balance boost: {balance > 0 ? Math.min(50, (balance / 10000) * 50).toFixed(1) + '%' : 'None'}
               </p>
             </div>
-            
+
             <div>
               <label className="font-bold block mb-1">Academic Qualification</label>
-              <select 
+              <select
                 className="w-full p-2 border rounded"
-                value={academicQualification} 
+                value={academicQualification}
                 onChange={(e) => setAcademicQualification(e.target.value)}
               >
                 <option value="none">None</option>
@@ -469,12 +461,12 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 <option value="phd">PhD</option>
               </select>
             </div>
-            
+
             <div>
               <label className="font-bold block mb-1">Formula Display</label>
-              <select 
+              <select
                 className="w-full p-2 border rounded"
-                value={formulaStyle} 
+                value={formulaStyle}
                 onChange={(e) => setFormulaStyle(e.target.value)}
               >
                 <option value="ascii">ASCII</option>
@@ -483,7 +475,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
           </div>
         </div>
-        
+
         <div className="border rounded-lg p-4 shadow-sm flex-1">
           <div className="border-b pb-2 mb-4">
             <h3 className="text-lg font-bold">Calculation Result</h3>
@@ -492,7 +484,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             <div className="text-3xl font-bold text-center p-4 border rounded bg-gray-50">
               {hourlyRate.toFixed(2)}€ per hour
             </div>
-            
+
             <div className="mt-6">
               <h4 className="text-lg font-bold mb-2">Calculation Steps:</h4>
               <div className="p-3 bg-gray-50 rounded">
@@ -503,7 +495,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 </ol>
               </div>
             </div>
-            
+
             <div className="mt-6">
               <h4 className="text-lg font-bold mb-2">Service Options:</h4>
               <div className="p-4 bg-gray-100 rounded border">
@@ -534,7 +526,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                     </label>
                   </div>
                 </div>
-                
+
                 {serviceType === "commercial" && (
                   <div className="mb-4 ml-6">
                     <div className="flex items-center mb-2">
@@ -557,7 +549,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                     </div>
                   </div>
                 )}
-                
+
                 <div className="mt-4 pt-4 border-t">
                   <div className="font-bold mb-2">Final Value:</div>
                   <div className="text-2xl font-bold">
@@ -566,11 +558,11 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                         return `${tierRates.internal.toFixed(2)}€`;
                       } else if (serviceType === "commercial") {
                         if (isStrategic) {
-                          return includeVAT 
+                          return includeVAT
                             ? `${tierRates.commercialStrategicVAT.toFixed(2)}€ (with VAT)`
                             : `${tierRates.commercialStrategic.toFixed(2)}€`;
                         } else {
-                          return includeVAT 
+                          return includeVAT
                             ? `${tierRates.commercialVAT.toFixed(2)}€ (with VAT)`
                             : `${tierRates.commercial.toFixed(2)}€`;
                         }
@@ -578,7 +570,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                     })()}
                   </div>
                 </div>
-                
+
                 <div className="mt-4 pt-4 border-t">
                   <div className="font-bold mb-2">Value Range:</div>
                   <div className="flex justify-between items-center">
@@ -598,7 +590,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           </div>
         </div>
       </div>
-      
+
       <div className="border rounded-lg p-4 shadow-sm">
         <div className="border-b pb-2 mb-4">
           <h3 className="text-lg font-bold">Seniority Bonus Growth Curve</h3>
@@ -608,14 +600,14 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           {/* The chart container */}
           <div className="absolute inset-0 flex items-end pt-10 pb-8">
             {chartData.map((point, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="h-full flex flex-col justify-end items-center"
                 style={{ width: `${100 / chartData.length}%` }}
               >
-                <div 
+                <div
                   className={`w-2 mx-px ${point.seniority <= MAX_SENIORITY ? 'bg-blue-500' : 'bg-gray-300'}`}
-                  style={{ 
+                  style={{
                     height: `${(point.bonus / Math.max(...chartData.map(d => d.bonus))) * 80}%`,
                     opacity: 0.7 + (point.seniority / (MAX_SENIORITY + 10)) * 0.3
                   }}
@@ -624,12 +616,12 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
               </div>
             ))}
           </div>
-          
+
           {/* Y-axis label */}
           <div className="absolute top-2 left-2 text-sm text-gray-500">
             Seniority bonus value (€)
           </div>
-          
+
           {/* X-axis labels - positioned separately */}
           <div className="absolute bottom-0 left-0 right-0 flex justify-between px-4">
             <div className="text-xs">0y</div>
@@ -642,7 +634,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           </div>
         </div>
       </div>
-      
+
       <div className="border rounded-lg p-4 shadow-sm">
         <div className="border-b pb-2 mb-4">
           <h3 className="text-lg font-bold">Hourly Rate By Age (Base calculation, no bonuses)</h3>
@@ -669,13 +661,13 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           </table>
         </div>
       </div>
-      
+
       {formulaStyle === "mathjax" ? (
         <div className="border rounded-lg p-4 shadow-sm">
           <div className="border-b pb-2 mb-4">
             <h3 className="text-lg font-bold">Mathematical Formula</h3>
           </div>
-          <div 
+          <div
             ref={mathJaxRef}
             dangerouslySetInnerHTML={{ __html: mathJaxFormula }}
           />
@@ -692,72 +684,88 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           </div>
         </div>
       )}
-      
-      <div className="border rounded-lg p-4 shadow-sm">
+
+      <div className="border rounded-lg p-4 shadow-sm mt-6">
         <div className="border-b pb-2 mb-4">
-          <h3 className="text-lg font-bold">Detailed Explanation</h3>
+          <h3 className="text-lg font-bold text-center">Detailed Explanation</h3>
         </div>
-        <div className="space-y-4">
+
+        <div className="flex flex-col gap-4 text-center">
+          {/* Base Calculation */}
           <div>
-            <h4 className="text-lg font-bold">Base Calculation</h4>
-            <p>The hourly rate starts at {(IASH * BASE_HOURLY_FACTOR).toFixed(2)}€ for individuals with no seniority (age 23 or younger).</p>
+            <h4 className="text-lg font-bold mb-2">Base Calculation</h4>
+            <p className="mb-2">The hourly rate starts at {(IASH * BASE_HOURLY_FACTOR).toFixed(2)}€ for individuals with no seniority (age 23 or younger).</p>
             <p>This base rate is calculated as {BASE_HOURLY_FACTOR} times the hourly equivalent of the IAS ({IASH.toFixed(2)}€), ensuring the base value remains proportional to the current IAS.</p>
           </div>
-          
+
+          {/* Seniority Growth Function */}
           <div>
-            <h4 className="text-lg font-bold">Seniority Growth Function f(s)</h4>
-            <p>Seniority is capped at {MAX_SENIORITY} years, meaning that after age {23 + MAX_SENIORITY}, additional years do not increase the hourly rate.</p>
-            <p>The formula uses a continuous growth function with three components that together create a natural progression curve:</p>
-            <ol className="list-decimal pl-5 space-y-1 mt-2">
-              <li><strong>Early Career Component:</strong> <code>4 × (1 - e<sup>-0.15s</sup>)</code><br/>
-                This creates rapid initial growth that gradually slows, providing most of the increase during the first 10 years.</li>
-              <li><strong>Mid-Career Component:</strong> <code>0.08 × max(0, s-10) × e<sup>-0.1×max(0,s-10)</sup></code><br/>
-                This adds moderate growth that kicks in after 10 years but naturally tapers off over time.</li>
-              <li><strong>Late Career Component:</strong> <code>0.02 × max(0, s-15)</code><br/>
-                This adds minimal linear growth after 15 years, until the cap at {MAX_SENIORITY} years.</li>
-            </ol>
+            <h4 className="text-lg font-bold mb-2">Seniority Growth Function f(s)</h4>
+            <p className="mb-2">Seniority is capped at {MAX_SENIORITY} years, meaning that after age {23 + MAX_SENIORITY}, additional years do not increase the hourly rate.</p>
+            <p className="mb-2">The formula uses a continuous growth function with three components that together create a natural progression curve:</p>
+
+            <div className="flex flex-col items-center mt-2">
+              <div className="mb-2">
+                <strong>1. Early Career Component:</strong> <code>4 × (1 - e<sup>-0.15s</sup>)</code><br />
+                This creates rapid initial growth that gradually slows, providing most of the increase during the first 10 years.
+              </div>
+              <div className="mb-2">
+                <strong>2. Mid-Career Component:</strong> <code>0.08 × max(0, s-10) × e<sup>-0.1×max(0,s-10)</sup></code><br />
+                This adds moderate growth that kicks in after 10 years but naturally tapers off over time.
+              </div>
+              <div className="mb-2">
+                <strong>3. Late Career Component:</strong> <code>0.02 × max(0, s-15)</code><br />
+                This adds minimal linear growth after 15 years, until the cap at {MAX_SENIORITY} years.
+              </div>
+            </div>
+
             <p className="mt-3">Together, these components form the function f(s) in the unified formula, which is multiplied by IAS/176 to determine the seniority bonus.</p>
           </div>
-          
+
+          {/* Status Modifiers */}
           <div>
-            <h4 className="text-lg font-bold">Status Modifiers</h4>
-            <ul className="list-disc pl-5">
-              <li>Ex Board Chair: +10%</li>
-              <li>Intern: -50%</li>
-              <li>Member: +10%</li>
-            </ul>
+            <h4 className="text-lg font-bold mb-2">Status Modifiers</h4>
+            <div className="flex flex-col items-center mb-2">
+              <div className="mb-1">• Ex Board Chair: +10%</div>
+              <div className="mb-1">• Intern: -50%</div>
+              <div className="mb-1">• Member: +10%</div>
+            </div>
             <p>These modifiers are multiplicative if multiple apply to the same person.</p>
           </div>
-          
+
+          {/* Balance Modifier */}
           <div>
-            <h4 className="text-lg font-bold">Balance Modifier</h4>
-            <p>For balances above 0€, a bonus of up to 50% is applied, scaling linearly up to 10,000€.</p>
+            <h4 className="text-lg font-bold mb-2">Balance Modifier</h4>
+            <p className="mb-2">For balances above 0€, a bonus of up to 50% is applied, scaling linearly up to 10,000€.</p>
             <p>Bonus percentage = min(50%, (balance / 10,000) × 50%)</p>
           </div>
-          
+
+          {/* Academic Qualification Bonus */}
           <div>
-            <h4 className="text-lg font-bold">Academic Qualification Bonus (non-cumulative)</h4>
-            <ul className="list-disc pl-5">
-              <li>Bachelor's Degree: +12%</li>
-              <li>Master's Degree: +20%</li>
-              <li>PhD: +35%</li>
-            </ul>
+            <h4 className="text-lg font-bold mb-2">Academic Qualification Bonus (non-cumulative)</h4>
+            <div className="flex flex-col items-center mb-2">
+              <div className="mb-1">• Bachelor's Degree: +12%</div>
+              <div className="mb-1">• Master's Degree: +20%</div>
+              <div className="mb-1">• PhD: +35%</div>
+            </div>
             <p>Only the highest qualification bonus applies.</p>
           </div>
-          
+
+          {/* Final Adjustment */}
           <div>
-            <h4 className="text-lg font-bold">Final Adjustment</h4>
+            <h4 className="text-lg font-bold mb-2">Final Adjustment</h4>
             <p>The result is rounded to the nearest quarter of a euro (0.25€).</p>
           </div>
-          
+
+          {/* Service Types */}
           <div>
-            <h4 className="text-lg font-bold">Service Types</h4>
-            <ul className="list-disc pl-5">
-              <li><strong>Internal:</strong> For services between members, within the cooperative ecosystem. Reference value without change (0%).</li>
-              <li><strong>Commercial:</strong> For services to third parties, invoiced through the cooperative. Additional fee of 50% on the reference value.</li>
-              <li><strong>Strategic:</strong> (Option for commercial services) For non-profit initiatives, local or of strategic interest. 25% reduction on the commercial value.</li>
-              <li><strong>VAT:</strong> Option to include Value Added Tax (23%) in the final calculation.</li>
-            </ul>
+            <h4 className="text-lg font-bold mb-2">Service Types</h4>
+            <div className="flex flex-col items-center">
+              <div className="mb-2"><strong>• Internal:</strong> For services between members, within the cooperative ecosystem. Reference value without change (0%).</div>
+              <div className="mb-2"><strong>• Commercial:</strong> For services to third parties, invoiced through the cooperative. Additional fee of 50% on the reference value.</div>
+              <div className="mb-2"><strong>• Strategic:</strong> (Option for commercial services) For non-profit initiatives, local or of strategic interest. 25% reduction on the commercial value.</div>
+              <div className="mb-2"><strong>• VAT:</strong> Option to include Value Added Tax (23%) in the final calculation.</div>
+            </div>
           </div>
         </div>
       </div>

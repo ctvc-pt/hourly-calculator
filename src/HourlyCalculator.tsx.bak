@@ -1,0 +1,397 @@
+import React, { useState, useEffect } from 'react';
+
+// Default Constants
+const DEFAULT_IAS = 480.43; // Current "Indexante dos Apoios Sociais" for Portugal
+const BASE_HOURLY_FACTOR = 1.85; // Factor chosen to make base hourly approximately 5€
+const MAX_SENIORITY = 20; // Maximum seniority years that count (after age 43)
+const VAT_RATE = 0.23; // VAT rate in Portugal (23%)
+
+const HourlyCalculator: React.FC = () => {
+  // Basic state
+  const [IAS, setIAS] = useState(DEFAULT_IAS);
+  const [age, setAge] = useState(30);
+  const [isExPresident, setIsExPresident] = useState(false);
+  const [isIntern, setIsIntern] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [academicQualification, setAcademicQualification] = useState("none");
+  
+  // Service type options
+  const [serviceType, setServiceType] = useState("internal");
+  const [isStrategic, setIsStrategic] = useState(false);
+  const [includeVAT, setIncludeVAT] = useState(true);
+  
+  // Results
+  const [hourlyRate, setHourlyRate] = useState(0);
+  const [calculationSteps, setCalculationSteps] = useState<string[]>([]);
+  const [tierRates, setTierRates] = useState({
+    base: 0,
+    internal: 0,
+    commercial: 0,
+    commercialStrategic: 0,
+    commercialVAT: 0,
+    commercialStrategicVAT: 0
+  });
+  
+  // IAS hourly equivalent
+  const IASH = IAS / 176;
+  
+  // Reset VAT when service type changes to commercial
+  useEffect(() => {
+    if (serviceType === "commercial") {
+      setIncludeVAT(true);
+    }
+  }, [serviceType]);
+
+  // Seniority bonus calculation
+  const calculateSeniorityBonus = (seniority: number) => {
+    const cappedSeniority = Math.min(seniority, MAX_SENIORITY);
+    
+    const earlyCareerComponent = 4 * (1 - Math.exp(-0.15 * cappedSeniority));
+    const midCareerComponent = 0.08 * Math.max(0, cappedSeniority - 10) * Math.exp(-0.1 * Math.max(0, cappedSeniority - 10));
+    const lateCareerComponent = 0.02 * Math.max(0, cappedSeniority - 15);
+    
+    return IASH * (earlyCareerComponent + midCareerComponent + lateCareerComponent);
+  };
+
+  // Main calculation function
+  const calculateHourly = () => {
+    const steps: string[] = [];
+    
+    const seniority = Math.max(0, age - 23);
+    steps.push(`Seniority: ${seniority} years${seniority > MAX_SENIORITY ? ` (capped at ${MAX_SENIORITY})` : ''}`);
+    
+    const baseHourly = IASH * BASE_HOURLY_FACTOR;
+    steps.push(`Base hourly rate: ${baseHourly.toFixed(2)}€`);
+    
+    const seniorityBonus = calculateSeniorityBonus(seniority);
+    steps.push(`Seniority bonus: ${seniorityBonus.toFixed(2)}€`);
+    
+    let hourly = baseHourly + seniorityBonus;
+    steps.push(`Base + Seniority: ${hourly.toFixed(2)}€`);
+    
+    // Status modifiers
+    if (isExPresident) {
+      const oldHourly = hourly;
+      hourly *= 1.10;
+      steps.push(`Ex Board Chair bonus (10%): ${hourly.toFixed(2)}€`);
+    }
+    
+    if (isIntern) {
+      const oldHourly = hourly;
+      hourly *= 0.50;
+      steps.push(`Intern penalty (50%): ${hourly.toFixed(2)}€`);
+    }
+    
+    if (isMember) {
+      const oldHourly = hourly;
+      hourly *= 1.10;
+      steps.push(`Member bonus (10%): ${hourly.toFixed(2)}€`);
+    }
+    
+    // Balance modifier
+    if (balance > 0) {
+      const balanceBoost = Math.min(0.50, (balance / 10000) * 0.50);
+      const oldHourly = hourly;
+      hourly *= (1 + balanceBoost);
+      steps.push(`Balance bonus (${(balanceBoost * 100).toFixed(1)}%): ${hourly.toFixed(2)}€`);
+    }
+    
+    // Academic qualification
+    if (academicQualification === "phd") {
+      const oldHourly = hourly;
+      hourly *= 1.35;
+      steps.push(`PhD bonus (35%): ${hourly.toFixed(2)}€`);
+    } else if (academicQualification === "master") {
+      const oldHourly = hourly;
+      hourly *= 1.20;
+      steps.push(`Master's bonus (20%): ${hourly.toFixed(2)}€`);
+    } else if (academicQualification === "bachelor") {
+      const oldHourly = hourly;
+      hourly *= 1.12;
+      steps.push(`Bachelor's bonus (12%): ${hourly.toFixed(2)}€`);
+    }
+    
+    // Round to nearest quarter euro
+    hourly = Math.round(hourly * 4) / 4;
+    steps.push(`Final hourly rate (rounded): ${hourly.toFixed(2)}€`);
+    
+    // Calculate additional service tiers
+    const baseRate = hourly;
+    const internalRate = baseRate;
+    const commercialRate = baseRate * 1.5;
+    const commercialStrategicRate = commercialRate * 0.75;
+    const commercialVATRate = commercialRate * (1 + VAT_RATE);
+    const commercialStrategicVATRate = commercialStrategicRate * (1 + VAT_RATE);
+    
+    setHourlyRate(hourly);
+    setCalculationSteps(steps);
+    setTierRates({
+      base: baseRate,
+      internal: internalRate,
+      commercial: commercialRate,
+      commercialStrategic: commercialStrategicRate,
+      commercialVAT: commercialVATRate,
+      commercialStrategicVAT: commercialStrategicVATRate
+    });
+  };
+
+  // Recalculate when inputs change
+  useEffect(() => {
+    calculateHourly();
+  }, [IAS, age, isExPresident, isIntern, isMember, balance, academicQualification]);
+
+  // Utility function to get the final service rate
+  const getFinalRate = () => {
+    if (serviceType === "internal") {
+      return tierRates.internal.toFixed(2) + "€";
+    } else if (serviceType === "commercial") {
+      if (isStrategic) {
+        return includeVAT 
+          ? `${tierRates.commercialStrategicVAT.toFixed(2)}€ (with VAT)`
+          : `${tierRates.commercialStrategic.toFixed(2)}€`;
+      } else {
+        return includeVAT 
+          ? `${tierRates.commercialVAT.toFixed(2)}€ (with VAT)`
+          : `${tierRates.commercial.toFixed(2)}€`;
+      }
+    }
+    return "";
+  };
+
+  return (
+    <div style={{fontFamily: 'Arial, sans-serif'}}>
+      <div style={{display: 'flex', flexWrap: 'wrap', gap: '20px'}}>
+        {/* Input Parameters */}
+        <div style={{flex: 1, minWidth: '300px', border: '1px solid #ddd', borderRadius: '8px', padding: '20px'}}>
+          <h3 style={{borderBottom: '1px solid #eee', paddingBottom: '10px', marginTop: 0}}>Input Parameters</h3>
+          
+          <div style={{marginBottom: '15px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <label><strong>IAS Value:</strong></label>
+              <div>
+                <input 
+                  type="number" 
+                  value={IAS} 
+                  onChange={(e) => setIAS(Number(e.target.value))}
+                  style={{width: '80px', padding: '5px'}} 
+                />€
+              </div>
+            </div>
+            <div style={{fontSize: '0.8rem', color: '#666'}}>
+              Hourly equivalent: IAS ÷ 176 = {IASH.toFixed(2)}€
+            </div>
+          </div>
+          
+          <div style={{marginBottom: '15px'}}>
+            <label><strong>Age: {age}</strong></label>
+            <input
+              type="range"
+              min={18}
+              max={70}
+              value={age}
+              onChange={(e) => setAge(Number(e.target.value))}
+              style={{width: '100%'}}
+            />
+            <div style={{fontSize: '0.8rem', color: '#666'}}>
+              Seniority: {Math.max(0, age - 23)} years
+              {age > 23 + MAX_SENIORITY && ` (capped at ${MAX_SENIORITY} for calculations)`}
+            </div>
+          </div>
+          
+          <div style={{marginBottom: '15px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+              <label><strong>Intern</strong></label>
+              <input
+                type="checkbox"
+                checked={isIntern}
+                onChange={(e) => setIsIntern(e.target.checked)}
+              />
+            </div>
+            
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+              <label><strong>Member</strong></label>
+              <input
+                type="checkbox"
+                checked={isMember}
+                onChange={(e) => setIsMember(e.target.checked)}
+              />
+            </div>
+            
+            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+              <label><strong>Ex Board Chair</strong></label>
+              <input
+                type="checkbox"
+                checked={isExPresident}
+                onChange={(e) => setIsExPresident(e.target.checked)}
+              />
+            </div>
+          </div>
+          
+          <div style={{marginBottom: '15px'}}>
+            <label><strong>Balance: {balance}€</strong></label>
+            <input
+              type="range"
+              min={0}
+              max={20000}
+              step={500}
+              value={balance}
+              onChange={(e) => setBalance(Number(e.target.value))}
+              style={{width: '100%'}}
+            />
+            <div style={{fontSize: '0.8rem', color: '#666'}}>
+              Balance boost: {balance > 0 ? Math.min(50, (balance / 10000) * 50).toFixed(1) + '%' : 'None'}
+            </div>
+          </div>
+          
+          <div style={{marginBottom: '15px'}}>
+            <label><strong>Academic Qualification</strong></label>
+            <select 
+              value={academicQualification} 
+              onChange={(e) => setAcademicQualification(e.target.value)}
+              style={{width: '100%', padding: '8px', marginTop: '5px'}}
+            >
+              <option value="none">None</option>
+              <option value="bachelor">Bachelor's Degree</option>
+              <option value="master">Master's Degree</option>
+              <option value="phd">PhD</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Calculation Results */}
+        <div style={{flex: 1, minWidth: '300px', border: '1px solid #ddd', borderRadius: '8px', padding: '20px'}}>
+          <h3 style={{borderBottom: '1px solid #eee', paddingBottom: '10px', marginTop: 0}}>Calculation Result</h3>
+          
+          <div style={{
+            fontSize: '28px', 
+            fontWeight: 'bold', 
+            textAlign: 'center', 
+            padding: '15px', 
+            backgroundColor: '#f8f9fa', 
+            border: '1px solid #ddd', 
+            borderRadius: '4px',
+            marginBottom: '20px'
+          }}>
+            {hourlyRate.toFixed(2)}€ per hour
+          </div>
+          
+          <div>
+            <h4 style={{marginBottom: '10px'}}>Calculation Steps:</h4>
+            <div style={{
+              backgroundColor: '#f8f9fa', 
+              padding: '15px', 
+              borderRadius: '4px', 
+              fontSize: '0.9rem'
+            }}>
+              <ol style={{paddingLeft: '20px', margin: 0}}>
+                {calculationSteps.map((step, index) => (
+                  <li key={index} style={{marginBottom: '5px'}}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+          
+          <div style={{marginTop: '20px'}}>
+            <h4 style={{marginBottom: '10px'}}>Service Options:</h4>
+            <div style={{
+              backgroundColor: '#f8f9fa', 
+              padding: '15px', 
+              borderRadius: '4px', 
+              border: '1px solid #ddd'
+            }}>
+              <div style={{marginBottom: '15px'}}>
+                <div style={{fontWeight: 'bold', marginBottom: '8px'}}>Service Type:</div>
+                <div style={{display: 'flex', gap: '15px'}}>
+                  <label style={{display: 'flex', alignItems: 'center'}}>
+                    <input
+                      type="radio"
+                      name="serviceType"
+                      value="internal"
+                      checked={serviceType === "internal"}
+                      onChange={() => setServiceType("internal")}
+                      style={{marginRight: '8px'}}
+                    />
+                    Internal (0%)
+                  </label>
+                  <label style={{display: 'flex', alignItems: 'center'}}>
+                    <input
+                      type="radio"
+                      name="serviceType"
+                      value="commercial"
+                      checked={serviceType === "commercial"}
+                      onChange={() => setServiceType("commercial")}
+                      style={{marginRight: '8px'}}
+                    />
+                    Commercial (+50%)
+                  </label>
+                </div>
+              </div>
+              
+              {serviceType === "commercial" && (
+                <div style={{marginBottom: '15px', marginLeft: '20px'}}>
+                  <div style={{display: 'flex', alignItems: 'center', marginBottom: '8px'}}>
+                    <input
+                      type="checkbox"
+                      checked={isStrategic}
+                      onChange={(e) => setIsStrategic(e.target.checked)}
+                      style={{marginRight: '8px'}}
+                    />
+                    <label>Strategic (-25% of commercial value)</label>
+                  </div>
+                  <div style={{display: 'flex', alignItems: 'center'}}>
+                    <input
+                      type="checkbox"
+                      checked={includeVAT}
+                      onChange={(e) => setIncludeVAT(e.target.checked)}
+                      style={{marginRight: '8px'}}
+                    />
+                    <label>Include VAT (23%)</label>
+                  </div>
+                </div>
+              )}
+              
+              <div style={{
+                marginTop: '15px', 
+                paddingTop: '15px', 
+                borderTop: '1px solid #ddd'
+              }}>
+                <div style={{fontWeight: 'bold', marginBottom: '8px'}}>Final Value:</div>
+                <div style={{fontSize: '24px', fontWeight: 'bold'}}>
+                  {getFinalRate()}
+                </div>
+              </div>
+              
+              <div style={{
+                marginTop: '15px', 
+                paddingTop: '15px', 
+                borderTop: '1px solid #ddd'
+              }}>
+                <div style={{fontWeight: 'bold', marginBottom: '8px'}}>Value Range:</div>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div>
+                    <div style={{fontSize: '0.8rem'}}>Minimum (Internal)</div>
+                    <div style={{fontWeight: 'bold'}}>{tierRates.internal.toFixed(2)}€</div>
+                  </div>
+                  <div style={{
+                    height: '4px', 
+                    backgroundColor: '#ddd', 
+                    flex: 1, 
+                    margin: '0 15px', 
+                    borderRadius: '4px'
+                  }}></div>
+                  <div>
+                    <div style={{fontSize: '0.8rem'}}>Maximum (Commercial + VAT)</div>
+                    <div style={{fontWeight: 'bold'}}>{tierRates.commercialVAT.toFixed(2)}€</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HourlyCalculator;

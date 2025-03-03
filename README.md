@@ -1,46 +1,110 @@
-# Getting Started with Create React App
+# Hourly Calculator
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React-based calculator for determining hourly rates based on various factors such as age, qualifications, and status.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Dynamic calculation of hourly rates based on seniority
+- Adjustments for qualifications, membership status, and other factors
+- Multiple service types (Internal, Commercial, Strategic)
+- Interactive visualization of seniority bonus growth
+- Mathematical formula display with MathJax integration
 
-### `npm start`
+## Installation
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/hourly-calculator.git
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+# Navigate to the project directory
+cd hourly-calculator
 
-### `npm test`
+# Install dependencies
+npm install
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Local Development
 
-### `npm run build`
+```bash
+# Start the development server
+npm start
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+This will run the app in development mode. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Deployment to GitHub Pages
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Prerequisites
 
-### `npm run eject`
+- GitHub account
+- Git installed on your computer
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Step 1: Create a GitHub Repository
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+1. Go to [github.com](https://github.com) and sign in
+2. Click the "+" icon in the top-right corner and select "New repository"
+3. Name your repository (e.g., "hourly-calculator")
+4. Choose whether to make it public or private
+5. Click "Create repository"
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Step 2: Initialize Git and Push Your Code
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```bash
+# Initialize Git in your project (if not already done)
+git init
 
-## Learn More
+# Add the remote repository
+git remote add origin https://github.com/yourusername/hourly-calculator.git
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# Add your files
+git add .
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Commit your files
+git commit -m "Initial commit"
+
+# Push to GitHub
+git push -u origin main
+```
+
+### Step 3: Install GitHub Pages Package
+
+Due to TypeScript version conflicts, you'll need to use a special flag:
+
+```bash
+npm install --save gh-pages --legacy-peer-deps
+```
+
+Or alternatively:
+
+```bash
+npm install --save gh-pages --force
+```
+
+### Step 4: Configure package.json
+
+Add these lines to your `package.json`:
+
+```json
+"homepage": "https://yourusername.github.io/hourly-calculator",
+"scripts": {
+  // ... other scripts
+  "predeploy": "npm run build",
+  "deploy": "gh-pages -d build"
+}
+```
+
+### Step 5: Deploy
+
+```bash
+# Deploy with the same flag to avoid TypeScript version conflicts
+npm run deploy --legacy-peer-deps
+```
+
+### Step 6: Configure GitHub Pages Settings
+
+1. Go to your repository on GitHub
+2. Navigate to Settings > Pages
+3. Under "Source," select the "gh-pages" branch
+4. Click "Save"
+
+Your application should be live at `https://cpdscrl.github.io/hourly-calculator` within a few minutes.

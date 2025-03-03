@@ -1,12 +1,13 @@
-import HourlyCalculator from './components/HourlyCalculator';
+import React from 'react';
+import HourlyCalculator from './HourlyCalculator';
+import './App.css';
 
 function App() {
   return (
-    <div className="App max-w-6xl mx-auto p-4">
-      <header className="mb-6 text-center">
-        <h1 className="text-2xl font-bold">Hourly Rate Calculator</h1>
-      </header>
-      <HourlyCalculator />
+    <div className="App">
+      <div style={{maxWidth: '1200px', margin: '0 auto', padding: '20px'}}>
+        <HourlyCalculator />
+      </div>
     </div>
   );
 }
