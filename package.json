@@ -1,6 +1,6 @@
 {
   "name": "hourly-calculator",
-  "homepage": "https://cpdscrl.github.io/hourly-calculator",
+  "homepage": "/",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
