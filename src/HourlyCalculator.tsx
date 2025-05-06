@@ -26,15 +26,15 @@ const HourlyCalculator = () => {
   const [formulaStyle, setFormulaStyle] = useState("mathjax"); // "ascii" or "mathjax"
 
   // State for additional pricing tiers
-  const [serviceType, setServiceType] = useState("internal"); // "internal" or "commercial"
+  const [serviceType, setServiceType] = useState("commercial"); // "internal" or "commercial"
   const [isStrategic, setIsStrategic] = useState(false);
   const [includeVAT, setIncludeVAT] = useState(true); // Default to true
   
-  // Keypress listener for "D" key to enable internal mode
+  // Keypress listener for "D" key to toggle internal mode
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'd' || event.key === 'D') {
-        setInternalMode(true);
+        setInternalMode(prevMode => !prevMode);
       }
     };
     
@@ -61,9 +61,9 @@ const HourlyCalculator = () => {
       setCornerClicks(0);
     }, 2000);
     
-    // Enable internal mode after 3 clicks
+    // Toggle internal mode after 3 clicks
     if (cornerClicks === 2) {
-      setInternalMode(true);
+      setInternalMode(prevMode => !prevMode);
     }
   };
 
@@ -74,10 +74,10 @@ const HourlyCalculator = () => {
     }
   }, [serviceType]);
   
-  // Effect to force internal service type when not in internal mode
+  // Effect to force commercial service type when not in internal mode
   useEffect(() => {
-    if (!internalMode && serviceType === "commercial") {
-      setServiceType("internal");
+    if (!internalMode && serviceType === "internal") {
+      setServiceType("commercial");
     }
   }, [internalMode, serviceType]);
 
@@ -558,34 +558,38 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 <div className="mb-4">
                   <div className="font-bold mb-2">Service Type:</div>
                   <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="serviceType"
-                        value="internal"
-                        checked={serviceType === "internal"}
-                        onChange={() => setServiceType("internal")}
-                        className="mr-2"
-                      />
-                      Internal (0%)
-                    </label>
-                    {internalMode && (
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="serviceType"
-                          value="commercial"
-                          checked={serviceType === "commercial"}
-                          onChange={() => setServiceType("commercial")}
-                          className="mr-2"
-                        />
-                        Commercial (+50%)
-                      </label>
+                    {internalMode ? (
+                      <>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="serviceType"
+                            value="internal"
+                            checked={serviceType === "internal"}
+                            onChange={() => setServiceType("internal")}
+                            className="mr-2"
+                          />
+                          Internal (0%)
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="serviceType"
+                            value="commercial"
+                            checked={serviceType === "commercial"}
+                            onChange={() => setServiceType("commercial")}
+                            className="mr-2"
+                          />
+                          Commercial (+50%)
+                        </label>
+                      </>
+                    ) : (
+                      <div className="py-1">Commercial</div>
                     )}
                   </div>
                 </div>
 
-                {internalMode && serviceType === "commercial" && (
+                {serviceType === "commercial" && (
                   <div className="mb-4 ml-6">
                     <div className="flex items-center mb-2">
                       <input
