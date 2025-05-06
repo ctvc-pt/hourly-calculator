@@ -394,7 +394,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
       {/* Invisible click target in the top-right corner */}
       <div 
         onClick={handleCornerClick}
-        className="absolute top-0 right-0 w-16 h-16 z-10"
+        className="absolute top-0 right-0 w-32 h-32 z-10"
         style={{ cursor: 'default' }}
       />
       
@@ -556,10 +556,10 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
               <h4 className="text-lg font-bold mb-2">Service Options:</h4>
               <div className="p-4 bg-gray-100 rounded border">
                 <div className="mb-4">
-                  <div className="font-bold mb-2">Service Type:</div>
-                  <div className="flex space-x-4">
-                    {internalMode ? (
-                      <>
+                  {internalMode ? (
+                    <>
+                      <div className="font-bold mb-2">Service Type:</div>
+                      <div className="flex space-x-4">
                         <label className="flex items-center">
                           <input
                             type="radio"
@@ -582,11 +582,9 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                           />
                           Commercial (+50%)
                         </label>
-                      </>
-                    ) : (
-                      <div className="py-1">Commercial</div>
-                    )}
-                  </div>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
 
                 {serviceType === "commercial" && (
