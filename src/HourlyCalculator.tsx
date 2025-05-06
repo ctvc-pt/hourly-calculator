@@ -7,6 +7,9 @@ const MAX_SENIORITY = 20; // Maximum seniority years that count (after age 43)
 const VAT_RATE = 0.23; // VAT rate in Portugal (23%)
 
 const HourlyCalculator = () => {
+  // State for internal mode
+  const [internalMode, setInternalMode] = useState(false);
+  
   // State for IAS value and derived IASH
   const [IAS, setIAS] = useState(DEFAULT_IAS);
   const [editingIAS, setEditingIAS] = useState(false);
@@ -26,6 +29,43 @@ const HourlyCalculator = () => {
   const [serviceType, setServiceType] = useState("internal"); // "internal" or "commercial"
   const [isStrategic, setIsStrategic] = useState(false);
   const [includeVAT, setIncludeVAT] = useState(true); // Default to true
+  
+  // Keypress listener for "D" key to enable internal mode
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'd' || event.key === 'D') {
+        setInternalMode(true);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+  
+  // Click counter for top-right corner clicks
+  const [cornerClicks, setCornerClicks] = useState(0);
+  const cornerClickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleCornerClick = () => {
+    setCornerClicks(prev => prev + 1);
+    
+    // Reset click counter after 2 seconds of inactivity
+    if (cornerClickTimerRef.current) {
+      clearTimeout(cornerClickTimerRef.current);
+    }
+    
+    cornerClickTimerRef.current = setTimeout(() => {
+      setCornerClicks(0);
+    }, 2000);
+    
+    // Enable internal mode after 3 clicks
+    if (cornerClicks === 2) {
+      setInternalMode(true);
+    }
+  };
 
   // Effect to set VAT to true when commercial is selected
   useEffect(() => {
@@ -33,6 +73,13 @@ const HourlyCalculator = () => {
       setIncludeVAT(true);
     }
   }, [serviceType]);
+  
+  // Effect to force internal service type when not in internal mode
+  useEffect(() => {
+    if (!internalMode && serviceType === "commercial") {
+      setServiceType("internal");
+    }
+  }, [internalMode, serviceType]);
 
   // State for result
   const [hourlyRate, setHourlyRate] = useState(0);
@@ -152,7 +199,7 @@ const HourlyCalculator = () => {
       steps.push(`Ex Board Chair bonus (10%): ${oldHourly.toFixed(2)}€ × 1.10 = ${hourly.toFixed(2)}€`);
     }
 
-    if (isIntern) {
+    if (internalMode && isIntern) {
       const oldHourly = hourly;
       hourly *= 0.50; // 50% penalty
       steps.push(`Intern penalty (50%): ${oldHourly.toFixed(2)}€ × 0.50 = ${hourly.toFixed(2)}€`);
@@ -214,13 +261,13 @@ const HourlyCalculator = () => {
     setCalculationSteps(steps);
 
     return hourly;
-  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, calculateSeniorityBonus]);
+  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, calculateSeniorityBonus]);
 
 
   // Calculate whenever inputs change
   useEffect(() => {
     calculateHourly();
-  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, calculateHourly]);
+  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, calculateHourly]);
 
   // Effect to render MathJax after the component updates
   useEffect(() => {
@@ -343,7 +390,14 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
 `;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 relative">
+      {/* Invisible click target in the top-right corner */}
+      <div 
+        onClick={handleCornerClick}
+        className="absolute top-0 right-0 w-16 h-16 z-10"
+        style={{ cursor: 'default' }}
+      />
+      
       <div className="flex flex-col md:flex-row gap-6">
         <div className="border rounded-lg p-4 shadow-sm flex-1">
           <div className="border-b pb-2 mb-4">
@@ -405,14 +459,16 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="font-bold">Intern</label>
-              <input
-                type="checkbox"
-                checked={isIntern}
-                onChange={(e) => setIsIntern(e.target.checked)}
-              />
-            </div>
+            {internalMode && (
+              <div className="flex items-center justify-between">
+                <label className="font-bold">Intern</label>
+                <input
+                  type="checkbox"
+                  checked={isIntern}
+                  onChange={(e) => setIsIntern(e.target.checked)}
+                />
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <label className="font-bold">Member</label>
@@ -513,21 +569,23 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                       />
                       Internal (0%)
                     </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="serviceType"
-                        value="commercial"
-                        checked={serviceType === "commercial"}
-                        onChange={() => setServiceType("commercial")}
-                        className="mr-2"
-                      />
-                      Commercial (+50%)
-                    </label>
+                    {internalMode && (
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="serviceType"
+                          value="commercial"
+                          checked={serviceType === "commercial"}
+                          onChange={() => setServiceType("commercial")}
+                          className="mr-2"
+                        />
+                        Commercial (+50%)
+                      </label>
+                    )}
                   </div>
                 </div>
 
-                {serviceType === "commercial" && (
+                {internalMode && serviceType === "commercial" && (
                   <div className="mb-4 ml-6">
                     <div className="flex items-center mb-2">
                       <input
