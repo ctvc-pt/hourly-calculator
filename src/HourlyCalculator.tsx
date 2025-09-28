@@ -201,8 +201,8 @@ const HourlyCalculator = () => {
 
     if (internalMode && isIntern) {
       const oldHourly = hourly;
-      hourly *= 0.50; // 50% penalty
-      steps.push(`Intern penalty (50%): ${oldHourly.toFixed(2)}€ × 0.50 = ${hourly.toFixed(2)}€`);
+      hourly *= 0.60; // 40% discount (60% of full rate)
+      steps.push(`Intern discount (40%): ${oldHourly.toFixed(2)}€ × 0.60 = ${hourly.toFixed(2)}€`);
     }
 
     if (isMember) {
@@ -320,7 +320,7 @@ const HourlyCalculator = () => {
         M_S &= \\prod_{i \\in \\text{Status}} k_i \\quad \\text{where} \\quad k_i = 
         \\begin{cases}
         1.10 & \\text{if Ex Board Chair} \\\\
-        0.50 & \\text{if Intern} \\\\
+        0.60 & \\text{if Intern} \\\\
         1.10 & \\text{if Member} \\\\
         1.00 & \\text{otherwise}
         \\end{cases} \\\\[8pt]
@@ -368,7 +368,7 @@ SeniorityBonus(s) = IASH * [
 5. STATUS MULTIPLIERS (multiplicative)
 ------------------------------------
 - Ex Board Chair: x 1.10
-- Intern: x 0.50
+- Intern: x 0.60
 - Member: x 1.10
 
 6. BALANCE MULTIPLIER
@@ -787,7 +787,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             <h4 className="text-lg font-bold mb-2">Status Modifiers</h4>
             <div className="flex flex-col items-center mb-2">
               <div className="mb-1">• Ex Board Chair: +10%</div>
-              <div className="mb-1">• Intern: -50%</div>
+              <div className="mb-1">• Intern: -40%</div>
               <div className="mb-1">• Member: +10%</div>
             </div>
             <p>These modifiers are multiplicative if multiple apply to the same person.</p>
