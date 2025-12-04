@@ -6,10 +6,29 @@ const BASE_HOURLY_FACTOR = 1.85; // Factor chosen to make base hourly approximat
 const MAX_SENIORITY = 20; // Maximum seniority years that count (after age 43)
 const VAT_RATE = 0.23; // VAT rate in Portugal (23%)
 
+// Tier multipliers and descriptions
+const WORK_TIERS = {
+  execution: {
+    multiplier: 1.0,
+    label: "Execution",
+    description: "Hands-on creation and delivery. The professional directly produces the work themselves — whether that's designing, building, writing, researching, or implementing. The focus is on delivering concrete outputs. The client provides goals; the professional delivers the artefacts. Responsibility is on the professional for the quality of the work, not the broader process or strategy."
+  },
+  guidance: {
+    multiplier: 1.5,
+    label: "Guidance & Audit",
+    description: "Expert direction, feedback, and quality assurance. The professional is not executing the tasks. Instead, they guide the team on how to do the work effectively, review what is produced, identify gaps, and ensure quality and alignment. This tier covers mentoring, critique, audits, design/architecture direction, and elevating the team's execution. The client owns the hands-on work; the professional owns the clarity and standards."
+  },
+  advisory: {
+    multiplier: 2.0,
+    label: "Advisory",
+    description: "Strategic partnership with accountability. At this level, the professional acts as an advisor who helps steer decisions, priorities, and direction. The team checks in with them, not for task updates, but for alignment with broader goals — whether strategic, organisational, design, or product-related. Their role is to bring pattern-recognition, experience, and judgment, helping the client avoid mistakes and move with intention. This is the highest-leverage tier: the client remains in control of execution, but the professional holds them accountable to the direction they define together."
+  }
+};
+
 const HourlyCalculator = () => {
   // State for internal mode
   const [internalMode, setInternalMode] = useState(false);
-  
+
   // State for IAS value and derived IASH
   const [IAS, setIAS] = useState(DEFAULT_IAS);
   const [editingIAS, setEditingIAS] = useState(false);
@@ -24,6 +43,9 @@ const HourlyCalculator = () => {
   const [balance, setBalance] = useState(0);
   const [academicQualification, setAcademicQualification] = useState("none");
   const [formulaStyle, setFormulaStyle] = useState("mathjax"); // "ascii" or "mathjax"
+
+  // State for work tier selection
+  const [workTier, setWorkTier] = useState<keyof typeof WORK_TIERS>("execution"); // Default to tier 1
 
   // State for additional pricing tiers
   const [serviceType, setServiceType] = useState("commercial"); // "internal" or "commercial"
@@ -240,8 +262,15 @@ const HourlyCalculator = () => {
     hourly = Math.round(hourly * 4) / 4;
     steps.push(`Rounded to nearest 0.25€: ${oldHourly.toFixed(2)}€ → ${hourly.toFixed(2)}€`);
 
+    // Apply work tier multiplier
+    const tierMultiplier = WORK_TIERS[workTier].multiplier;
+    const baseRateBeforeTier = hourly;
+    const baseRate = hourly * tierMultiplier;
+    if (tierMultiplier !== 1.0) {
+      steps.push(`Work tier (${WORK_TIERS[workTier].label}) ×${tierMultiplier}: ${baseRateBeforeTier.toFixed(2)}€ × ${tierMultiplier} = ${baseRate.toFixed(2)}€`);
+    }
+
     // Calculate additional tier rates
-    const baseRate = hourly;
     const internalRate = baseRate;
     const commercialRate = baseRate * 1.5; // +50%
     const commercialStrategicRate = commercialRate * 0.75; // -25% of commercial
@@ -261,13 +290,13 @@ const HourlyCalculator = () => {
     setCalculationSteps(steps);
 
     return hourly;
-  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, calculateSeniorityBonus]);
+  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, calculateSeniorityBonus]);
 
 
   // Calculate whenever inputs change
   useEffect(() => {
     calculateHourly();
-  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, calculateHourly]);
+  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, calculateHourly]);
 
   // Effect to render MathJax after the component updates
   useEffect(() => {
@@ -519,6 +548,24 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
 
             <div>
+              <label className="font-bold block mb-1">Work Tier</label>
+              <select
+                className="w-full p-2 border rounded"
+                value={workTier}
+                onChange={(e) => setWorkTier(e.target.value as keyof typeof WORK_TIERS)}
+              >
+                {Object.entries(WORK_TIERS).map(([key, tier]) => (
+                  <option key={key} value={key}>
+                    {tier.label} (×{tier.multiplier})
+                  </option>
+                ))}
+              </select>
+              <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-gray-700">
+                {WORK_TIERS[workTier].description}
+              </div>
+            </div>
+
+            <div>
               <label className="font-bold block mb-1">Formula Display</label>
               <select
                 className="w-full p-2 border rounded"
@@ -555,6 +602,16 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             <div className="mt-6">
               <h4 className="text-lg font-bold mb-2">Service Options:</h4>
               <div className="p-4 bg-gray-100 rounded border">
+                <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+                  <div className="font-bold mb-1">Selected Work Tier:</div>
+                  <div className="text-lg">{WORK_TIERS[workTier].label} (×{WORK_TIERS[workTier].multiplier})</div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {workTier === 'execution' && 'Base rate applied'}
+                    {workTier === 'guidance' && '+50% multiplier applied'}
+                    {workTier === 'advisory' && '+100% multiplier applied (×2)'}
+                  </div>
+                </div>
+
                 <div className="mb-4">
                   {internalMode ? (
                     <>
