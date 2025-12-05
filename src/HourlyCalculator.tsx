@@ -239,7 +239,7 @@ const HourlyCalculator = () => {
       const balanceBoost = Math.min(0.50, (balance / 10000) * 0.50);
       const oldHourly = hourly;
       hourly *= (1 + balanceBoost);
-      steps.push(`Balance bonus (${(balanceBoost * 100).toFixed(2)}%): ${oldHourly.toFixed(2)}€ × ${(1 + balanceBoost).toFixed(2)} = ${hourly.toFixed(2)}€`);
+      steps.push(`Economic Participation bonus (${(balanceBoost * 100).toFixed(2)}%): ${oldHourly.toFixed(2)}€ × ${(1 + balanceBoost).toFixed(2)} = ${hourly.toFixed(2)}€`);
     }
 
     // Apply academic qualification modifier (non-cumulative)
@@ -320,8 +320,40 @@ const HourlyCalculator = () => {
     // Calculate hourly rate
     let hourly = baseHourly + seniorityBonus;
 
+    // Apply status modifiers
+    if (isFormerChair) {
+      hourly *= 1.10; // 10% boost
+    }
+
+    if (internalMode && isIntern) {
+      hourly *= 0.60; // 40% discount
+    }
+
+    if (isMember) {
+      hourly *= 1.10; // 10% boost
+    }
+
+    // Apply balance modifier
+    if (balance > 0) {
+      const balanceBoost = Math.min(0.50, (balance / 10000) * 0.50);
+      hourly *= (1 + balanceBoost);
+    }
+
+    // Apply academic qualification modifier
+    if (academicQualification === "phd") {
+      hourly *= 1.35; // 35% boost
+    } else if (academicQualification === "master") {
+      hourly *= 1.20; // 20% boost
+    } else if (academicQualification === "bachelor") {
+      hourly *= 1.12; // 12% boost
+    }
+
     // Round to nearest quarter
     hourly = Math.round(hourly * 4) / 4;
+
+    // Apply work tier multiplier
+    const tierMultiplier = WORK_TIERS[workTier].multiplier;
+    hourly = hourly * tierMultiplier;
 
     ageRangeData.push({ age: a, hourly: hourly });
   }
@@ -353,7 +385,7 @@ const HourlyCalculator = () => {
         1.10 & \\text{if Member} \\\\
         1.00 & \\text{otherwise}
         \\end{cases} \\\\[8pt]
-        M_B &= 1 + \\min\\left(0.50, \\frac{\\text{Balance}}{10,000} \\times 0.50\\right) \\\\[8pt]
+        M_B &= 1 + \\min\\left(0.50, \\frac{\\text{Economic Participation}}{10,000} \\times 0.50\\right) \\\\[8pt]
         M_Q &= 
         \\begin{cases}
         1.35 & \\text{if PhD} \\\\
@@ -400,9 +432,9 @@ SeniorityBonus(s) = IASH * [
 - Intern: x 0.60
 - Member: x 1.10
 
-6. BALANCE MULTIPLIER
--------------------
-BalanceMultiplier = 1 + min(0.50, (Balance / 10000) * 0.50)
+6. ECONOMIC PARTICIPATION MULTIPLIER
+------------------------------------
+EconomicParticipationMultiplier = 1 + min(0.50, (Economic Participation / 10000) * 0.50)
 
 7. QUALIFICATION MULTIPLIER (highest only)
 ---------------------------------------
@@ -413,8 +445,8 @@ BalanceMultiplier = 1 + min(0.50, (Balance / 10000) * 0.50)
 
 8. FINAL CALCULATION
 ------------------
-Hourly = round[(BaseHourly + SeniorityBonus(s)) * 
-         StatusMultiplier * BalanceMultiplier * 
+Hourly = round[(BaseHourly + SeniorityBonus(s)) *
+         StatusMultiplier * EconomicParticipationMultiplier *
          QualificationMultiplier * 4] / 4
 `;
 
@@ -518,7 +550,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
 
             <div>
-              <label className="font-bold block mb-1">Balance: {balance}€</label>
+              <label className="font-bold block mb-1">Economic Participation: {balance}€</label>
               <input
                 type="range"
                 min={0}
@@ -529,7 +561,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 className="w-full"
               />
               <p className="text-sm text-gray-500">
-                Balance boost: {balance > 0 ? Math.min(50, (balance / 10000) * 50).toFixed(1) + '%' : 'None'}
+                Economic Participation boost: {balance > 0 ? Math.min(50, (balance / 10000) * 50).toFixed(1) + '%' : 'None'}
               </p>
             </div>
 
@@ -585,7 +617,21 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           </div>
           <div>
             <div className="text-3xl font-bold text-center p-4 border rounded bg-gray-50">
-              {hourlyRate.toFixed(2)}€ per hour
+              {(() => {
+                if (serviceType === "internal") {
+                  return `${tierRates.internal.toFixed(2)}€ per hour`;
+                } else if (serviceType === "commercial") {
+                  if (isStrategic) {
+                    return includeVAT
+                      ? `${tierRates.commercialStrategicVAT.toFixed(2)}€ per hour (with VAT)`
+                      : `${tierRates.commercialStrategic.toFixed(2)}€ per hour`;
+                  } else {
+                    return includeVAT
+                      ? `${tierRates.commercialVAT.toFixed(2)}€ per hour (with VAT)`
+                      : `${tierRates.commercial.toFixed(2)}€ per hour`;
+                  }
+                }
+              })()}
             </div>
 
             <div className="mt-6">
@@ -688,20 +734,22 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t">
-                  <div className="font-bold mb-2">Value Range:</div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-sm">Minimum (Internal)</div>
-                      <div className="font-bold">{tierRates.internal.toFixed(2)}€</div>
-                    </div>
-                    <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
-                    <div>
-                      <div className="text-sm">Maximum (Commercial + VAT)</div>
-                      <div className="font-bold">{tierRates.commercialVAT.toFixed(2)}€</div>
+                {internalMode && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="font-bold mb-2">Value Range:</div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-sm">Minimum (Internal)</div>
+                        <div className="font-bold">{tierRates.internal.toFixed(2)}€</div>
+                      </div>
+                      <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
+                      <div>
+                        <div className="text-sm">Maximum (Commercial + VAT)</div>
+                        <div className="font-bold">{tierRates.commercialVAT.toFixed(2)}€</div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -754,7 +802,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
 
       <div className="border rounded-lg p-4 shadow-sm">
         <div className="border-b pb-2 mb-4">
-          <h3 className="text-lg font-bold">Hourly Rate By Age (Base calculation, no bonuses)</h3>
+          <h3 className="text-lg font-bold">Hourly Rate By Age (with current settings)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -850,11 +898,11 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             <p>These modifiers are multiplicative if multiple apply to the same person.</p>
           </div>
 
-          {/* Balance Modifier */}
+          {/* Economic Participation Modifier */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Balance Modifier</h4>
-            <p className="mb-2">For balances above 0€, a bonus of up to 50% is applied, scaling linearly up to 10,000€.</p>
-            <p>Bonus percentage = min(50%, (balance / 10,000) × 50%)</p>
+            <h4 className="text-lg font-bold mb-2">Economic Participation Modifier</h4>
+            <p className="mb-2">For economic participation above 0€, a bonus of up to 50% is applied, scaling linearly up to 10,000€.</p>
+            <p>Bonus percentage = min(50%, (economic participation / 10,000) × 50%)</p>
           </div>
 
           {/* Academic Qualification Bonus */}
