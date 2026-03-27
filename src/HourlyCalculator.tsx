@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // Default Constants
-const DEFAULT_IAS = 480.43; // Current "Indexante dos Apoios Sociais" for Portugal (2023)
-const BASE_HOURLY_FACTOR = 1.85; // Factor chosen to make base hourly approximately 5€
+const DEFAULT_IAS = 537.13; // Current "Indexante dos Apoios Sociais" for Portugal
+const BASE_HOURLY_FACTOR = 2; // Base hourly factor
+
+// Projected BASE_HOURLY_FACTOR roadmap
+const FACTOR_ROADMAP = [
+  { year: 2025, factor: 2, label: "2 (current)", isCurrent: true },
+  { year: 2026, factor: Math.PI / Math.SQRT2, label: "π/√2 ≈ 2.221" },
+  { year: 2027, factor: Math.log(10), label: "ln(10) ≈ 2.303" },
+  { year: 2028, factor: (Math.PI * Math.PI) / 4, label: "π²/4 ≈ 2.467" },
+  { year: 2029, factor: Math.sqrt(7), label: "√7 ≈ 2.646" },
+  { year: 2030, factor: Math.E, label: "e ≈ 2.718" },
+];
 const MAX_SENIORITY = 20; // Maximum seniority years that count (after age 43)
 const VAT_RATE = 0.23; // VAT rate in Portugal (23%)
 
@@ -43,6 +53,11 @@ const HourlyCalculator = () => {
   const [balance, setBalance] = useState(0);
   const [academicQualification, setAcademicQualification] = useState("none");
   const [formulaStyle, setFormulaStyle] = useState("mathjax"); // "ascii" or "mathjax"
+
+  // State for factor projection (debug mode only)
+  const [selectedFactorIndex, setSelectedFactorIndex] = useState(0); // 0 = current (2025)
+  const activeFactor = FACTOR_ROADMAP[selectedFactorIndex].factor;
+  const isProjection = selectedFactorIndex > 0;
 
   // State for work tier selection
   const [workTier, setWorkTier] = useState<keyof typeof WORK_TIERS>("execution"); // Default to tier 1
@@ -96,10 +111,13 @@ const HourlyCalculator = () => {
     }
   }, [serviceType]);
   
-  // Effect to force commercial service type when not in internal mode
+  // Effect to force commercial service type and reset projection when not in internal mode
   useEffect(() => {
-    if (!internalMode && serviceType === "internal") {
-      setServiceType("commercial");
+    if (!internalMode) {
+      if (serviceType === "internal") {
+        setServiceType("commercial");
+      }
+      setSelectedFactorIndex(0); // Reset to current factor
     }
   }, [internalMode, serviceType]);
 
@@ -188,9 +206,9 @@ const HourlyCalculator = () => {
     }
 
     // Base hourly calculation - now based on IAS
-    const baseHourly = IASH * BASE_HOURLY_FACTOR;
-    steps.push(`Base hourly rate: (${IAS.toFixed(2)}€ ÷ 176) × ${BASE_HOURLY_FACTOR} = ${IASH.toFixed(2)}€ × ${BASE_HOURLY_FACTOR} = ${baseHourly.toFixed(2)}€`);
-    steps.push(`Note: ${BASE_HOURLY_FACTOR} factor chosen to make base hourly approximately 5€`);
+    const baseHourly = IASH * activeFactor;
+    steps.push(`Base hourly rate: (${IAS.toFixed(2)}€ ÷ 176) × ${activeFactor.toFixed(4)} = ${IASH.toFixed(2)}€ × ${activeFactor.toFixed(4)} = ${baseHourly.toFixed(2)}€`);
+    steps.push(`Note: Base hourly factor is ${activeFactor.toFixed(4)}${isProjection ? ` (${FACTOR_ROADMAP[selectedFactorIndex].year} projection)` : ''}`);
 
     // Apply seniority growth using the continuous function
     const seniorityBonus = calculateSeniorityBonus(seniority);
@@ -290,13 +308,13 @@ const HourlyCalculator = () => {
     setCalculationSteps(steps);
 
     return hourly;
-  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, calculateSeniorityBonus]);
+  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, activeFactor, isProjection, selectedFactorIndex, calculateSeniorityBonus]);
 
 
   // Calculate whenever inputs change
   useEffect(() => {
     calculateHourly();
-  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, calculateHourly]);
+  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, activeFactor, calculateHourly]);
 
   // Effect to render MathJax after the component updates
   useEffect(() => {
@@ -312,7 +330,7 @@ const HourlyCalculator = () => {
     const seniority = Math.max(0, a - 23);
 
     // Base hourly calculation
-    const baseHourly = IASH * BASE_HOURLY_FACTOR;
+    const baseHourly = IASH * activeFactor;
 
     // Apply seniority growth
     const seniorityBonus = calculateSeniorityBonus(seniority);
@@ -374,7 +392,7 @@ const HourlyCalculator = () => {
       <div style="overflow-x: auto; padding: 10px;">
         $$
         \\begin{align}
-        \\text{Hourly} &= \\mathbf{\\text{round}}\\left\\{\\left[\\left(\\frac{\\text{IAS}}{176} \\times ${BASE_HOURLY_FACTOR}\\right) + \\left(\\frac{\\text{IAS}}{176} \\times f(s)\\right)\\right] \\times M_S \\times M_B \\times M_Q \\times 4 \\right\\} \\div 4 \\\\[12pt]
+        \\text{Hourly} &= \\mathbf{\\text{round}}\\left\\{\\left[\\left(\\frac{\\text{IAS}}{176} \\times ${activeFactor.toFixed(4)}\\right) + \\left(\\frac{\\text{IAS}}{176} \\times f(s)\\right)\\right] \\times M_S \\times M_B \\times M_Q \\times 4 \\right\\} \\div 4 \\\\[12pt]
         \\text{where:} \\\\[8pt]
         s &= \\min(\\max(0, \\text{age} - 23), ${MAX_SENIORITY}) \\\\[8pt]
         f(s) &= 4(1-e^{-0.15s}) + 0.08\\max(0,s-10)e^{-0.1\\max(0,s-10)} + 0.02\\max(0,s-15) \\\\[8pt]
@@ -412,7 +430,7 @@ MAX_SENIORITY = ${MAX_SENIORITY} years
 
 2. BASE HOURLY RATE
 ------------------
-BaseHourly = IASH * ${BASE_HOURLY_FACTOR} = ${(IASH * BASE_HOURLY_FACTOR).toFixed(2)}€
+BaseHourly = IASH * ${activeFactor.toFixed(4)} = ${(IASH * activeFactor).toFixed(2)}€
 
 3. EFFECTIVE SENIORITY
 --------------------
@@ -500,7 +518,28 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
               </div>
               <p className="text-sm text-gray-500">"Indexante dos Apoios Sociais" for Portugal</p>
               <p className="text-sm text-gray-500">Hourly equivalent: IAS ÷ 176 = {IASH.toFixed(2)}€</p>
-              <p className="text-sm text-gray-500">Base rate factor: {BASE_HOURLY_FACTOR} (creates a base hourly of ~5€)</p>
+              <p className="text-sm text-gray-500">Base rate factor: {activeFactor.toFixed(4)}{isProjection ? ` (${FACTOR_ROADMAP[selectedFactorIndex].year} projection)` : ''}</p>
+              {internalMode && (
+                <div className="mt-2">
+                  <label className="text-sm font-bold block mb-1">Factor Projection</label>
+                  <select
+                    className="w-full p-2 border rounded text-sm"
+                    value={selectedFactorIndex}
+                    onChange={(e) => setSelectedFactorIndex(parseInt(e.target.value))}
+                  >
+                    {FACTOR_ROADMAP.map((entry, idx) => (
+                      <option key={idx} value={idx}>
+                        {entry.year}: {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                  {isProjection && (
+                    <div className="mt-1 p-2 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 font-medium">
+                      ⚠ Projection — not the current formula
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -859,8 +898,8 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
           {/* Base Calculation */}
           <div>
             <h4 className="text-lg font-bold mb-2">Base Calculation</h4>
-            <p className="mb-2">The hourly rate starts at {(IASH * BASE_HOURLY_FACTOR).toFixed(2)}€ for individuals with no seniority (age 23 or younger).</p>
-            <p>This base rate is calculated as {BASE_HOURLY_FACTOR} times the hourly equivalent of the IAS ({IASH.toFixed(2)}€), ensuring the base value remains proportional to the current IAS.</p>
+            <p className="mb-2">The hourly rate starts at {(IASH * activeFactor).toFixed(2)}€ for individuals with no seniority (age 23 or younger).</p>
+            <p>This base rate is calculated as {activeFactor.toFixed(4)} times the hourly equivalent of the IAS ({IASH.toFixed(2)}€), ensuring the base value remains proportional to the current IAS.</p>
           </div>
 
           {/* Seniority Growth Function */}
