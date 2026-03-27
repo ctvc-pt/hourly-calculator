@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 
 // Default Constants
 const DEFAULT_IAS = 537.13; // Current "Indexante dos Apoios Sociais" for Portugal
-const BASE_HOURLY_FACTOR = 2; // Base hourly factor
 
 // Projected BASE_HOURLY_FACTOR roadmap
 const FACTOR_ROADMAP = [
@@ -122,7 +121,7 @@ const HourlyCalculator = () => {
   }, [internalMode, serviceType]);
 
   // State for result
-  const [hourlyRate, setHourlyRate] = useState(0);
+  const [, setHourlyRate] = useState(0);
   const [calculationSteps, setCalculationSteps] = useState<string[]>([]);
   const [tierRates, setTierRates] = useState({
     base: 0,
