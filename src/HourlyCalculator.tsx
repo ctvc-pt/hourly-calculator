@@ -5,8 +5,8 @@ const DEFAULT_IAS = 537.13; // Current "Indexante dos Apoios Sociais" for Portug
 
 // Projected BASE_HOURLY_FACTOR roadmap
 const FACTOR_ROADMAP = [
-  { year: 2025, factor: 2, label: "2 (current)", isCurrent: true },
-  { year: 2026, factor: Math.PI / Math.SQRT2, label: "π/√2 ≈ 2.221" },
+  { year: 2025, factor: 2, label: "2 (obsolete)", obsolete: true },
+  { year: 2026, factor: Math.PI / Math.SQRT2, label: "π/√2 ≈ 2.221 (current)", isCurrent: true },
   { year: 2027, factor: Math.log(10), label: "ln(10) ≈ 2.303" },
   { year: 2028, factor: (Math.PI * Math.PI) / 4, label: "π²/4 ≈ 2.467" },
   { year: 2029, factor: Math.sqrt(7), label: "√7 ≈ 2.646" },
@@ -54,9 +54,10 @@ const HourlyCalculator = () => {
   const [formulaStyle, setFormulaStyle] = useState("mathjax"); // "ascii" or "mathjax"
 
   // State for factor projection (debug mode only)
-  const [selectedFactorIndex, setSelectedFactorIndex] = useState(0); // 0 = current (2025)
+  const currentFactorIndex = FACTOR_ROADMAP.findIndex(e => e.isCurrent);
+  const [selectedFactorIndex, setSelectedFactorIndex] = useState(currentFactorIndex);
   const activeFactor = FACTOR_ROADMAP[selectedFactorIndex].factor;
-  const isProjection = selectedFactorIndex > 0;
+  const isProjection = selectedFactorIndex !== currentFactorIndex;
 
   // State for work tier selection
   const [workTier, setWorkTier] = useState<keyof typeof WORK_TIERS>("execution"); // Default to tier 1
@@ -116,9 +117,9 @@ const HourlyCalculator = () => {
       if (serviceType === "internal") {
         setServiceType("commercial");
       }
-      setSelectedFactorIndex(0); // Reset to current factor
+      setSelectedFactorIndex(currentFactorIndex); // Reset to current factor
     }
-  }, [internalMode, serviceType]);
+  }, [internalMode, serviceType, currentFactorIndex]);
 
   // State for result
   const [, setHourlyRate] = useState(0);
@@ -527,7 +528,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                     onChange={(e) => setSelectedFactorIndex(parseInt(e.target.value))}
                   >
                     {FACTOR_ROADMAP.map((entry, idx) => (
-                      <option key={idx} value={idx}>
+                      <option key={idx} value={idx} disabled={'obsolete' in entry && entry.obsolete}>
                         {entry.year}: {entry.label}
                       </option>
                     ))}
