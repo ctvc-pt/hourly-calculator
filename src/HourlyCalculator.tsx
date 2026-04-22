@@ -384,8 +384,6 @@ const HourlyCalculator = () => {
   }
 
   const vatLabel = locale === "pt" ? "IVA" : "VAT";
-  const hourLabel = locale === "pt" ? "hora" : "hour";
-
   // MathJax formula (uses LaTeX math notation — not translatable, only section headers)
   const mathJaxFormula = `
     <div class="p-4 bg-gray-50 rounded">
