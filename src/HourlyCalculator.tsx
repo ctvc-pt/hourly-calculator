@@ -706,7 +706,6 @@ Internal:
                 <>
                   <div className="text-sm text-gray-500 mb-1">{t("result.internalValue")}</div>
                   <div className="text-3xl font-bold">{tierRates.internalRate.toFixed(2)}€ {t("result.perHour")}</div>
-                  <div className="text-sm text-gray-500 mt-1">{t("result.noMarginNoVat")}</div>
                 </>
               )}
             </div>
