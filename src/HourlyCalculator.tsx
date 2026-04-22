@@ -735,7 +735,7 @@ Internal:
                       onChange={() => setServiceType("commercial")}
                       className="mr-2"
                     />
-                    {t("result.commercial")} ({t("result.margin")} + {vatLabel})
+                    {t("result.commercial")} (+{Math.round(tierRates.effectiveMargin * 100)}% + {vatLabel})
                   </label>
                 </div>
               </div>
