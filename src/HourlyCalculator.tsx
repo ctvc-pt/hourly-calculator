@@ -71,7 +71,7 @@ const HourlyCalculator = () => {
   const [isMember, setIsMember] = useState(false);
   const [balance, setBalance] = useState(0);
   const [academicQualification, setAcademicQualification] = useState("none");
-  const [formulaStyle, setFormulaStyle] = useState("mathjax"); // "ascii" or "mathjax"
+  const [formulaStyle, setFormulaStyle] = useState("none"); // "none", "ascii", or "mathjax"
 
   // State for factor projection (debug mode only)
   const currentFactorIndex = FACTOR_ROADMAP.findIndex(e => e.isCurrent);
@@ -686,17 +686,6 @@ Internal:
               </div>
             )}
 
-            <div>
-              <label className="font-bold block mb-1">{t("input.formulaDisplay")}</label>
-              <select
-                className="w-full p-2 border rounded"
-                value={formulaStyle}
-                onChange={(e) => setFormulaStyle(e.target.value)}
-              >
-                <option value="ascii">ASCII</option>
-                <option value="mathjax">MathJax</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -705,118 +694,120 @@ Internal:
             <h3 className="text-lg font-bold">{t("result.title")}</h3>
           </div>
           <div>
-            <div className="p-4 bg-gray-100 rounded border">
-              <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-                <div className="font-bold mb-1">{t("result.selectedWorkTier")}</div>
-                <div className="text-lg">{workTierInfo[workTier].label} (×{WORK_TIER_MULTIPLIERS[workTier]})</div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {workTier === 'execution' && t("tier.baseRate")}
-                  {workTier === 'guidance' && t("tier.guidance50")}
-                  {workTier === 'advisory' && t("tier.advisory100")}
-                </div>
-              </div>
-
-              {internalMode && (
-                <div className="mb-4">
-                  <div className="font-bold mb-2">{t("result.serviceType")}</div>
-                  <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="serviceType"
-                        value="internal"
-                        checked={serviceType === "internal"}
-                        onChange={() => setServiceType("internal")}
-                        className="mr-2"
-                      />
-                      {t("result.internal")} (-{Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}%)
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="serviceType"
-                        value="commercial"
-                        checked={serviceType === "commercial"}
-                        onChange={() => setServiceType("commercial")}
-                        className="mr-2"
-                      />
-                      {t("result.commercial")} (+{Math.round(COOP_MARGIN * 100)}% {t("result.margin")} + {vatLabel})
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 pt-4 border-t">
-                {serviceType === "commercial" ? (
-                  <>
-                    <div className="font-bold mb-3">{t("result.breakdown")}</div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>{t("result.memberRate")}</span>
-                        <span className="font-medium">{tierRates.memberRate.toFixed(2)}€</span>
-                      </div>
-                      <div className="flex justify-between text-gray-600">
-                        <span className="group relative cursor-help">
-                          + {t("result.coopMargin")} ({Math.round(tierRates.effectiveMargin * 100)}%)
-                          <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                            {t("result.coopMarginTooltip", { pct: Math.round(tierRates.effectiveMargin * 100) })}
-                          </span>
-                        </span>
-                        <span>{tierRates.coopMarginAmount.toFixed(2)}€</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-1">
-                        <span>{t("result.subtotal")}</span>
-                        <span className="font-medium">{tierRates.clientBeforeVAT.toFixed(2)}€</span>
-                      </div>
-                      {tierRates.vatAmount > 0 && (
-                        <div className="flex justify-between text-gray-600">
-                          <span>+ {vatLabel} ({Math.round(CLIENT_VAT_RATES[clientCountry].rate * 100)}%)</span>
-                          <span>{tierRates.vatAmount.toFixed(2)}€</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between border-t pt-1 text-lg font-bold">
-                        <span>{t("result.clientPays")}</span>
-                        <span>{tierRates.clientTotal.toFixed(2)}€</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-                      <div className="font-bold text-green-800">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="font-bold mb-2">{t("result.internalValue")}</div>
-                    <div className="text-2xl font-bold">{tierRates.internalRate.toFixed(2)}€</div>
-                    <div className="mt-2 text-sm text-gray-600">
-                      <span className="group relative cursor-help">
-                        {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(tierRates.effectiveMargin * 100) })}
-                        <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                          {t("result.internalTooltip")}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">{t("result.noMarginNoVat")}</div>
-                  </>
-                )}
-              </div>
-
-              {internalMode && (
-                <div className="mt-4 pt-4 border-t">
-                  <div className="font-bold mb-2">{t("result.valueRange")}</div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-sm">{t("result.minimum")}</div>
-                      <div className="font-bold">{tierRates.internalRate.toFixed(2)}€</div>
-                    </div>
-                    <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
-                    <div>
-                      <div className="text-sm">{t("result.maximum")}</div>
-                      <div className="font-bold">{tierRates.clientTotal.toFixed(2)}€</div>
-                    </div>
-                  </div>
-                </div>
+            {/* Highlighted total */}
+            <div className="text-center p-4 border rounded bg-gray-50">
+              {serviceType === "commercial" ? (
+                <>
+                  <div className="text-sm text-gray-500 mb-1">{t("result.clientLabel")}</div>
+                  <div className="text-3xl font-bold">{tierRates.clientTotal.toFixed(2)}€ {t("result.perHour")}</div>
+                  {tierRates.vatAmount > 0 && (
+                    <div className="text-sm text-gray-500 mt-1">({t("result.vatIncluded")})</div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-500 mb-1">{t("result.internalValue")}</div>
+                  <div className="text-3xl font-bold">{tierRates.internalRate.toFixed(2)}€ {t("result.perHour")}</div>
+                  <div className="text-sm text-gray-500 mt-1">{t("result.noMarginNoVat")}</div>
+                </>
               )}
             </div>
+
+            {internalMode && (
+              <div className="mt-4 mb-4">
+                <div className="font-bold mb-2">{t("result.serviceType")}</div>
+                <div className="flex space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="serviceType"
+                      value="internal"
+                      checked={serviceType === "internal"}
+                      onChange={() => setServiceType("internal")}
+                      className="mr-2"
+                    />
+                    {t("result.internal")} (-{Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}%)
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="serviceType"
+                      value="commercial"
+                      checked={serviceType === "commercial"}
+                      onChange={() => setServiceType("commercial")}
+                      className="mr-2"
+                    />
+                    {t("result.commercial")} (+{Math.round(COOP_MARGIN * 100)}% {t("result.margin")} + {vatLabel})
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Breakdown */}
+            <div className="p-4 bg-gray-100 rounded border mt-4">
+              {serviceType === "commercial" ? (
+                <>
+                  <div className="font-bold mb-3">{t("result.breakdown")}</div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>{t("result.memberRate")}</span>
+                      <span className="font-medium">{tierRates.memberRate.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span className="group relative cursor-help">
+                        + {t("result.coopMargin")} ({Math.round(tierRates.effectiveMargin * 100)}%)
+                        <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                          {t("result.coopMarginTooltip", { pct: Math.round(tierRates.effectiveMargin * 100) })}
+                        </span>
+                      </span>
+                      <span>{tierRates.coopMarginAmount.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1">
+                      <span>{t("result.subtotal")}</span>
+                      <span className="font-medium">{tierRates.clientBeforeVAT.toFixed(2)}€</span>
+                    </div>
+                    {tierRates.vatAmount > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>+ {vatLabel} ({Math.round(CLIENT_VAT_RATES[clientCountry].rate * 100)}%)</span>
+                        <span>{tierRates.vatAmount.toFixed(2)}€</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-1 text-lg font-bold">
+                      <span>{t("result.clientPays")}</span>
+                      <span>{tierRates.clientTotal.toFixed(2)}€</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-600">
+                    <span className="group relative cursor-help">
+                      {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(tierRates.effectiveMargin * 100) })}
+                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                        {t("result.internalTooltip")}
+                      </span>
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {internalMode && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="font-bold mb-2">{t("result.valueRange")}</div>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm">{t("result.minimum")}</div>
+                    <div className="font-bold">{tierRates.internalRate.toFixed(2)}€</div>
+                  </div>
+                  <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
+                  <div>
+                    <div className="text-sm">{t("result.maximum")}</div>
+                    <div className="font-bold">{tierRates.clientTotal.toFixed(2)}€</div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6">
               <h4 className="text-lg font-bold mb-2">{t("result.calculationSteps")}</h4>
@@ -898,28 +889,42 @@ Internal:
         </div>
       </div>
 
-      {formulaStyle === "mathjax" ? (
-        <div className="border rounded-lg p-4 shadow-sm">
-          <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-bold">{t("formula.mathTitle")}</h3>
+      <div className="border rounded-lg p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">{t("formula.mathTitle")}</h3>
+          <div className="flex gap-2">
+            {formulaStyle !== "none" && (
+              <button
+                onClick={() => setFormulaStyle(formulaStyle === "mathjax" ? "ascii" : "mathjax")}
+                className="text-sm px-3 py-1 rounded border hover:bg-gray-100"
+              >
+                {formulaStyle === "mathjax" ? "ASCII" : "MathJax"}
+              </button>
+            )}
+            <button
+              onClick={() => setFormulaStyle(formulaStyle === "none" ? "mathjax" : "none")}
+              className="text-sm px-3 py-1 rounded border hover:bg-gray-100"
+            >
+              {formulaStyle === "none" ? t("formula.showFormula") : t("formula.hideFormula")}
+            </button>
           </div>
-          <div
-            ref={mathJaxRef}
-            dangerouslySetInnerHTML={{ __html: mathJaxFormula }}
-          />
         </div>
-      ) : (
-        <div className="border rounded-lg p-4 shadow-sm">
-          <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-bold">{t("formula.asciiTitle")}</h3>
+        {formulaStyle === "mathjax" && (
+          <div className="mt-4">
+            <div
+              ref={mathJaxRef}
+              dangerouslySetInnerHTML={{ __html: mathJaxFormula }}
+            />
           </div>
-          <div className="p-4 bg-gray-50 rounded">
+        )}
+        {formulaStyle === "ascii" && (
+          <div className="mt-4 p-4 bg-gray-50 rounded">
             <pre className="whitespace-pre-wrap break-all font-mono text-sm">
               {asciiFormula}
             </pre>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="border rounded-lg p-4 shadow-sm mt-6">
         <div className="border-b pb-2 mb-4">

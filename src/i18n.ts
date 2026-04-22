@@ -18,7 +18,7 @@ const translations = {
   "input.forCalculations": { en: "for calculations", pt: "para cálculos" },
   "input.intern": { en: "Intern", pt: "Estagiário" },
   "input.member": { en: "Member", pt: "Membro" },
-  "input.exBoardChair": { en: "Ex Board Chair", pt: "Ex-Presidente da Mesa" },
+  "input.exBoardChair": { en: "Ex Board Chair", pt: "Ex-Órgão Social" },
   "input.economicParticipation": { en: "Economic Participation:", pt: "Participação Económica:" },
   "input.economicBoost": { en: "Economic Participation boost:", pt: "Bónus de Participação Económica:" },
   "input.none": { en: "None", pt: "Nenhum" },
@@ -48,9 +48,8 @@ const translations = {
     en: "Strategic partnership with accountability. At this level, the professional acts as an advisor who helps steer decisions, priorities, and direction. The team checks in with them, not for task updates, but for alignment with broader goals — whether strategic, organisational, design, or product-related. Their role is to bring pattern-recognition, experience, and judgment, helping the client avoid mistakes and move with intention. This is the highest-leverage tier: the client remains in control of execution, but the professional holds them accountable to the direction they define together.",
     pt: "Parceria estratégica com responsabilização. Neste nível, o profissional atua como consultor que ajuda a orientar decisões, prioridades e direção. A equipa consulta-o não para atualizações de tarefas, mas para alinhamento com objetivos mais amplos — estratégicos, organizacionais, de design ou de produto. O seu papel é trazer reconhecimento de padrões, experiência e julgamento, ajudando o cliente a evitar erros e a agir com intenção. Este é o nível de maior alavancagem: o cliente mantém o controlo da execução, mas o profissional responsabiliza-o pela direção que definem em conjunto."
   },
-  "tier.baseRate": { en: "Base rate applied", pt: "Taxa base aplicada" },
-  "tier.guidance50": { en: "+50% multiplier applied", pt: "Multiplicador de +50% aplicado" },
-  "tier.advisory100": { en: "+100% multiplier applied (×2)", pt: "Multiplicador de +100% aplicado (×2)" },
+  "result.clientLabel": { en: "To charge the client", pt: "A cobrar ao cliente" },
+  "result.vatIncluded": { en: "VAT included", pt: "IVA incluído" },
 
   // Results
   "result.title": { en: "Calculation Result", pt: "Resultado do Cálculo" },
@@ -67,14 +66,14 @@ const translations = {
   "result.commercial": { en: "Commercial", pt: "Comercial" },
   "result.margin": { en: "margin", pt: "margem" },
   "result.breakdown": { en: "Breakdown:", pt: "Decomposição:" },
-  "result.memberRate": { en: "Member rate", pt: "Taxa do membro" },
+  "result.memberRate": { en: "Fee", pt: "Honorário" },
   "result.coopMargin": { en: "Cooperative margin", pt: "Margem cooperativa" },
   "result.coopMarginTooltip": {
     en: "The cooperative retains {pct}% on the member's rate for operational costs and sustainability. This margin varies by client country.",
     pt: "A cooperativa retém {pct}% sobre a taxa do membro para custos operacionais e sustentabilidade. Esta margem varia conforme o país do cliente."
   },
   "result.subtotal": { en: "Subtotal", pt: "Subtotal" },
-  "result.clientPays": { en: "Client pays", pt: "Cliente paga" },
+  "result.clientPays": { en: "Total", pt: "Total" },
   "result.effectiveFee": { en: "Effective fee:", pt: "Fee efetiva:" },
   "result.afterVatRecovery": { en: "(after VAT recovery)", pt: "(após recuperação de IVA)" },
   "result.effectiveFeeTooltip": {
@@ -199,6 +198,10 @@ const translations = {
   // MathJax section headers (these are inside HTML strings so handled separately)
   "mathjax.unifiedFormula": { en: "Unified Formula", pt: "Fórmula Unificada" },
   "mathjax.serviceFormulas": { en: "Service Type Formulas", pt: "Fórmulas de Tipo de Serviço" },
+
+  // Formula
+  "formula.showFormula": { en: "Show formula", pt: "Mostrar fórmula" },
+  "formula.hideFormula": { en: "Hide formula", pt: "Ocultar fórmula" },
 
   // Footer
   "footer.language": { en: "Language:", pt: "Idioma:" },
