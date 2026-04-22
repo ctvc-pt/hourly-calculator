@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createT, getSavedLocale, saveLocale, type Locale } from './i18n';
 
 // Default Constants
 const DEFAULT_IAS = 537.13; // Current "Indexante dos Apoios Sociais" for Portugal
@@ -13,28 +14,47 @@ const FACTOR_ROADMAP = [
   { year: 2030, factor: Math.E, label: "e ≈ 2.718" },
 ];
 const MAX_SENIORITY = 20; // Maximum seniority years that count (after age 43)
-const VAT_RATE = 0.23; // VAT rate in Portugal (23%)
 
-// Tier multipliers and descriptions
-const WORK_TIERS = {
-  execution: {
-    multiplier: 1.0,
-    label: "Execution",
-    description: "Hands-on creation and delivery. The professional directly produces the work themselves — whether that's designing, building, writing, researching, or implementing. The focus is on delivering concrete outputs. The client provides goals; the professional delivers the artefacts. Responsibility is on the professional for the quality of the work, not the broader process or strategy."
-  },
-  guidance: {
-    multiplier: 1.5,
-    label: "Guidance & Audit",
-    description: "Expert direction, feedback, and quality assurance. The professional is not executing the tasks. Instead, they guide the team on how to do the work effectively, review what is produced, identify gaps, and ensure quality and alignment. This tier covers mentoring, critique, audits, design/architecture direction, and elevating the team's execution. The client owns the hands-on work; the professional owns the clarity and standards."
-  },
-  advisory: {
-    multiplier: 2.0,
-    label: "Advisory",
-    description: "Strategic partnership with accountability. At this level, the professional acts as an advisor who helps steer decisions, priorities, and direction. The team checks in with them, not for task updates, but for alignment with broader goals — whether strategic, organisational, design, or product-related. Their role is to bring pattern-recognition, experience, and judgment, helping the client avoid mistakes and move with intention. This is the highest-leverage tier: the client remains in control of execution, but the professional holds them accountable to the direction they define together."
-  }
+// Base fiscal — all other cooperative constants derive from this
+const BASE_VAT = 0.23; // Portuguese VAT (reference for cooperative constants)
+
+// Derived constants — zero magic numbers
+const COOP_MARGIN = Math.floor(BASE_VAT * 100 * 2 / 3) / 100;           // ⌊23×2/3⌋ = 0.15 (15%)
+const MEMBER_INTERNAL_DISCOUNT = COOP_MARGIN;                             // mirrors margin = 15%
+const MIN_EFFECTIVE_FEE = Math.floor(COOP_MARGIN * 100 / 3) / 100;       // ⌊15/3⌋ = 0.05 (5%)
+
+// Client VAT rates by location
+const CLIENT_VAT_RATES: Record<string, { rate: number; label: string }> = {
+  PT: { rate: 0.23, label: "Portugal (23%)" },
+  ES: { rate: 0.21, label: "Espanha (21%)" },
+  FR: { rate: 0.20, label: "França (20%)" },
+  DE: { rate: 0.19, label: "Alemanha (19%)" },
+  IT: { rate: 0.22, label: "Itália (22%)" },
+  NL: { rate: 0.21, label: "Países Baixos (21%)" },
+  BE: { rate: 0.21, label: "Bélgica (21%)" },
+  IE: { rate: 0.23, label: "Irlanda (23%)" },
+  UK: { rate: 0.20, label: "Reino Unido (20%)" },
+  EU_RC: { rate: 0, label: "EU B2B — Reverse Charge (0%)" },
+  NON_EU: { rate: 0, label: "Fora da EU (0%)" },
+};
+
+// Tier multipliers (labels/descriptions come from i18n)
+const WORK_TIER_MULTIPLIERS = {
+  execution: 1.0,
+  guidance: 1.5,
+  advisory: 2.0,
 };
 
 const HourlyCalculator = () => {
+  // Language state with localStorage persistence
+  const [locale, setLocale] = useState<Locale>(getSavedLocale);
+  const t = createT(locale);
+
+  const handleLocaleChange = (newLocale: Locale) => {
+    setLocale(newLocale);
+    saveLocale(newLocale);
+  };
+
   // State for internal mode
   const [internalMode, setInternalMode] = useState(false);
 
@@ -60,13 +80,19 @@ const HourlyCalculator = () => {
   const isProjection = selectedFactorIndex !== currentFactorIndex;
 
   // State for work tier selection
-  const [workTier, setWorkTier] = useState<keyof typeof WORK_TIERS>("execution"); // Default to tier 1
+  const [workTier, setWorkTier] = useState<keyof typeof WORK_TIER_MULTIPLIERS>("execution"); // Default to tier 1
 
   // State for additional pricing tiers
   const [serviceType, setServiceType] = useState("commercial"); // "internal" or "commercial"
-  const [isStrategic, setIsStrategic] = useState(false);
-  const [includeVAT, setIncludeVAT] = useState(true); // Default to true
-  
+  const [clientCountry, setClientCountry] = useState("PT"); // Client country for VAT
+
+  // Tier labels and descriptions (locale-dependent)
+  const workTierInfo = {
+    execution: { label: t("tier.execution.label"), description: t("tier.execution.desc") },
+    guidance: { label: t("tier.guidance.label"), description: t("tier.guidance.desc") },
+    advisory: { label: t("tier.advisory.label"), description: t("tier.advisory.desc") },
+  };
+
   // Keypress listener for "D" key to toggle internal mode
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -74,43 +100,36 @@ const HourlyCalculator = () => {
         setInternalMode(prevMode => !prevMode);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-  
+
   // Click counter for top-right corner clicks
   const [cornerClicks, setCornerClicks] = useState(0);
   const cornerClickTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const handleCornerClick = () => {
     setCornerClicks(prev => prev + 1);
-    
+
     // Reset click counter after 2 seconds of inactivity
     if (cornerClickTimerRef.current) {
       clearTimeout(cornerClickTimerRef.current);
     }
-    
+
     cornerClickTimerRef.current = setTimeout(() => {
       setCornerClicks(0);
     }, 2000);
-    
+
     // Toggle internal mode after 3 clicks
     if (cornerClicks === 2) {
       setInternalMode(prevMode => !prevMode);
     }
   };
 
-  // Effect to set VAT to true when commercial is selected
-  useEffect(() => {
-    if (serviceType === "commercial") {
-      setIncludeVAT(true);
-    }
-  }, [serviceType]);
-  
   // Effect to force commercial service type and reset projection when not in internal mode
   useEffect(() => {
     if (!internalMode) {
@@ -125,12 +144,14 @@ const HourlyCalculator = () => {
   const [, setHourlyRate] = useState(0);
   const [calculationSteps, setCalculationSteps] = useState<string[]>([]);
   const [tierRates, setTierRates] = useState({
-    base: 0,
-    internal: 0,
-    commercial: 0,
-    commercialStrategic: 0,
-    commercialVAT: 0,
-    commercialStrategicVAT: 0
+    memberRate: 0,
+    memberEffectiveEarnings: 0,
+    effectiveFee: 0,
+    internalRate: 0,
+    clientBeforeVAT: 0,
+    vatAmount: 0,
+    clientTotal: 0,
+    coopMarginAmount: 0,
   });
 
   // Refs for MathJax
@@ -281,114 +302,97 @@ const HourlyCalculator = () => {
     steps.push(`Rounded to nearest 0.25€: ${oldHourly.toFixed(2)}€ → ${hourly.toFixed(2)}€`);
 
     // Apply work tier multiplier
-    const tierMultiplier = WORK_TIERS[workTier].multiplier;
+    const tierMultiplier = WORK_TIER_MULTIPLIERS[workTier];
     const baseRateBeforeTier = hourly;
     const baseRate = hourly * tierMultiplier;
     if (tierMultiplier !== 1.0) {
-      steps.push(`Work tier (${WORK_TIERS[workTier].label}) ×${tierMultiplier}: ${baseRateBeforeTier.toFixed(2)}€ × ${tierMultiplier} = ${baseRate.toFixed(2)}€`);
+      steps.push(`Work tier (${workTierInfo[workTier].label}) ×${tierMultiplier}: ${baseRateBeforeTier.toFixed(2)}€ × ${tierMultiplier} = ${baseRate.toFixed(2)}€`);
     }
 
-    // Calculate additional tier rates
-    const internalRate = baseRate;
-    const commercialRate = baseRate * 1.5; // +50%
-    const commercialStrategicRate = commercialRate * 0.75; // -25% of commercial
-    const commercialVATRate = commercialRate * (1 + VAT_RATE);
-    const commercialStrategicVATRate = commercialStrategicRate * (1 + VAT_RATE);
+    // Calculate service type rates
+    const memberRate = baseRate;
+
+    // VAT from client country
+    const clientVatRate = CLIENT_VAT_RATES[clientCountry].rate;
+    const vatRecovery = Math.floor(clientVatRate * 100 / 2) / 100;
+    const effectiveFee = Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - vatRecovery);
+
+    // Commercial — what the client pays
+    const clientBeforeVAT = memberRate * (1 + COOP_MARGIN);
+    const vatAmount = clientBeforeVAT * clientVatRate;
+    const clientTotal = clientBeforeVAT + vatAmount;
+    const coopMarginAmount = memberRate * COOP_MARGIN;
+    const memberEffectiveEarnings = memberRate * (1 - effectiveFee);
+
+    // Internal
+    const internalRate = memberRate * (1 - MEMBER_INTERNAL_DISCOUNT);
 
     setTierRates({
-      base: baseRate,
-      internal: internalRate,
-      commercial: commercialRate,
-      commercialStrategic: commercialStrategicRate,
-      commercialVAT: commercialVATRate,
-      commercialStrategicVAT: commercialStrategicVATRate
+      memberRate,
+      memberEffectiveEarnings,
+      effectiveFee,
+      internalRate,
+      clientBeforeVAT,
+      vatAmount,
+      clientTotal,
+      coopMarginAmount,
     });
 
     setHourlyRate(hourly);
     setCalculationSteps(steps);
 
     return hourly;
-  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, activeFactor, isProjection, selectedFactorIndex, calculateSeniorityBonus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [IAS, IASH, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, activeFactor, isProjection, selectedFactorIndex, calculateSeniorityBonus, clientCountry, locale]);
 
 
   // Calculate whenever inputs change
   useEffect(() => {
     calculateHourly();
-  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, activeFactor, calculateHourly]);
+  }, [IAS, age, isFormerChair, isIntern, isMember, balance, academicQualification, internalMode, workTier, activeFactor, clientCountry, calculateHourly]);
 
   // Effect to render MathJax after the component updates
   useEffect(() => {
     if (formulaStyle === 'mathjax' && window.MathJax && mathJaxRef.current) {
       window.MathJax.Hub.Queue(['Typeset', window.MathJax.Hub, mathJaxRef.current]);
     }
-  }, [formulaStyle, IAS]);
+  }, [formulaStyle, IAS, locale]);
 
   // Generate data for age chart
   const ageRangeData = [];
   for (let a = 23; a <= 65; a += 5) {
-    // Calculate seniority
     const seniority = Math.max(0, a - 23);
-
-    // Base hourly calculation
     const baseHourly = IASH * activeFactor;
-
-    // Apply seniority growth
     const seniorityBonus = calculateSeniorityBonus(seniority);
-
-    // Calculate hourly rate
     let hourly = baseHourly + seniorityBonus;
-
-    // Apply status modifiers
-    if (isFormerChair) {
-      hourly *= 1.10; // 10% boost
-    }
-
-    if (internalMode && isIntern) {
-      hourly *= 0.60; // 40% discount
-    }
-
-    if (isMember) {
-      hourly *= 1.10; // 10% boost
-    }
-
-    // Apply balance modifier
+    if (isFormerChair) hourly *= 1.10;
+    if (internalMode && isIntern) hourly *= 0.60;
+    if (isMember) hourly *= 1.10;
     if (balance > 0) {
       const balanceBoost = Math.min(0.50, (balance / 10000) * 0.50);
       hourly *= (1 + balanceBoost);
     }
-
-    // Apply academic qualification modifier
-    if (academicQualification === "phd") {
-      hourly *= 1.35; // 35% boost
-    } else if (academicQualification === "master") {
-      hourly *= 1.20; // 20% boost
-    } else if (academicQualification === "bachelor") {
-      hourly *= 1.12; // 12% boost
-    }
-
-    // Round to nearest quarter
+    if (academicQualification === "phd") hourly *= 1.35;
+    else if (academicQualification === "master") hourly *= 1.20;
+    else if (academicQualification === "bachelor") hourly *= 1.12;
     hourly = Math.round(hourly * 4) / 4;
-
-    // Apply work tier multiplier
-    const tierMultiplier = WORK_TIERS[workTier].multiplier;
-    hourly = hourly * tierMultiplier;
-
-    ageRangeData.push({ age: a, hourly: hourly });
+    hourly = hourly * WORK_TIER_MULTIPLIERS[workTier];
+    ageRangeData.push({ age: a, hourly });
   }
 
   // Generate chart data for seniority curve visualization
   const chartData: { seniority: number; bonus: number }[] = [];
   for (let i = 0; i <= MAX_SENIORITY + 10; i += 1) {
-    chartData.push({
-      seniority: i,
-      bonus: calculateSeniorityBonus(i)
-    });
+    chartData.push({ seniority: i, bonus: calculateSeniorityBonus(i) });
   }
 
-  // MathJax formula
+  const vatLabel = locale === "pt" ? "IVA" : "VAT";
+  const hourLabel = locale === "pt" ? "hora" : "hour";
+
+  // MathJax formula (uses LaTeX math notation — not translatable, only section headers)
   const mathJaxFormula = `
     <div class="p-4 bg-gray-50 rounded">
-      <h4 class="font-bold mb-6 text-center text-xl">Unified Formula</h4>
+      <h4 class="font-bold mb-6 text-center text-xl">${t("mathjax.unifiedFormula")}</h4>
       <div style="overflow-x: auto; padding: 10px;">
         $$
         \\begin{align}
@@ -396,7 +400,7 @@ const HourlyCalculator = () => {
         \\text{where:} \\\\[8pt]
         s &= \\min(\\max(0, \\text{age} - 23), ${MAX_SENIORITY}) \\\\[8pt]
         f(s) &= 4(1-e^{-0.15s}) + 0.08\\max(0,s-10)e^{-0.1\\max(0,s-10)} + 0.02\\max(0,s-15) \\\\[8pt]
-        M_S &= \\prod_{i \\in \\text{Status}} k_i \\quad \\text{where} \\quad k_i = 
+        M_S &= \\prod_{i \\in \\text{Status}} k_i \\quad \\text{where} \\quad k_i =
         \\begin{cases}
         1.10 & \\text{if Ex Board Chair} \\\\
         0.60 & \\text{if Intern} \\\\
@@ -404,7 +408,7 @@ const HourlyCalculator = () => {
         1.00 & \\text{otherwise}
         \\end{cases} \\\\[8pt]
         M_B &= 1 + \\min\\left(0.50, \\frac{\\text{Economic Participation}}{10,000} \\times 0.50\\right) \\\\[8pt]
-        M_Q &= 
+        M_Q &=
         \\begin{cases}
         1.35 & \\text{if PhD} \\\\
         1.20 & \\text{if Master's} \\\\
@@ -414,10 +418,23 @@ const HourlyCalculator = () => {
         \\end{align}
         $$
       </div>
+      <div style="overflow-x: auto; padding: 10px; margin-top: 20px;">
+        <h4 class="font-bold mb-4 text-center text-lg">${t("mathjax.serviceFormulas")}</h4>
+        $$
+        \\begin{align}
+        \\text{MemberRate} &= \\text{Hourly} \\times \\text{TierMultiplier} \\\\[8pt]
+        \\text{CoopMargin} &= \\lfloor \\text{VAT}_{\\text{PT}} \\times \\tfrac{2}{3} \\rfloor = ${Math.round(COOP_MARGIN * 100)}\\% \\\\[8pt]
+        \\text{ClientPays} &= \\text{MemberRate} \\times (1 + \\text{CoopMargin}) \\times (1 + \\text{VAT}_{\\text{client}}) \\\\[8pt]
+        \\text{Internal} &= \\text{MemberRate} \\times (1 - \\text{CoopMargin}) \\\\[8pt]
+        \\text{VATRecovery} &= \\lfloor \\text{VAT}_{\\text{client}} / 2 \\rfloor \\\\[8pt]
+        \\text{EffectiveFee} &= \\max\\left(\\lfloor \\text{CoopMargin} / 3 \\rfloor,\\; \\text{CoopMargin} - \\text{VATRecovery}\\right)
+        \\end{align}
+        $$
+      </div>
     </div>
   `;
 
-  // ASCII formula
+  // ASCII formula (technical notation — kept in English as it's a formula reference)
   const asciiFormula = `
 HOURLY RATE CALCULATION FORMULA
 ================================
@@ -466,26 +483,42 @@ EconomicParticipationMultiplier = 1 + min(0.50, (Economic Participation / 10000)
 Hourly = round[(BaseHourly + SeniorityBonus(s)) *
          StatusMultiplier * EconomicParticipationMultiplier *
          QualificationMultiplier * 4] / 4
+
+9. SERVICE TYPE (applied after rounding and tier)
+-----------------------------------------------
+MemberRate = Hourly × TierMultiplier
+CoopMargin = floor(VAT_PT × 2/3) = ${Math.round(COOP_MARGIN * 100)}%
+MinFee     = floor(CoopMargin / 3) = ${Math.round(MIN_EFFECTIVE_FEE * 100)}%
+
+Commercial:
+  ClientPays = MemberRate × (1 + CoopMargin) × (1 + VAT_client)
+  VATRecovery = floor(VAT_client / 2)
+  EffectiveFee = max(MinFee, CoopMargin - VATRecovery)
+  MemberNets = MemberRate × (1 - EffectiveFee)
+
+Internal:
+  InternalRate = MemberRate × (1 - CoopMargin)
+  No cooperative margin. No VAT.
 `;
 
   return (
     <div className="flex flex-col gap-6 relative">
       {/* Invisible click target in the top-right corner */}
-      <div 
+      <div
         onClick={handleCornerClick}
         className="absolute top-0 right-0 w-32 h-32 z-10"
         style={{ cursor: 'default' }}
       />
-      
+
       <div className="flex flex-col md:flex-row gap-6">
         <div className="border rounded-lg p-4 shadow-sm flex-1">
           <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-bold">Input Parameters</h3>
+            <h3 className="text-lg font-bold">{t("input.title")}</h3>
           </div>
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="font-bold">IAS Value</label>
+                <label className="font-bold">{t("input.iasValue")}</label>
                 {editingIAS ? (
                   <div className="flex items-center">
                     <input
@@ -512,16 +545,16 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                     }}
                     className="text-blue-500 hover:text-blue-700 text-sm"
                   >
-                    <span className="text-lg">{IAS.toFixed(2)}€</span> (Edit)
+                    <span className="text-lg">{IAS.toFixed(2)}€</span> {t("input.edit")}
                   </button>
                 )}
               </div>
-              <p className="text-sm text-gray-500">"Indexante dos Apoios Sociais" for Portugal</p>
-              <p className="text-sm text-gray-500">Hourly equivalent: IAS ÷ 176 = {IASH.toFixed(2)}€</p>
-              <p className="text-sm text-gray-500">Base rate factor: {activeFactor.toFixed(4)}{isProjection ? ` (${FACTOR_ROADMAP[selectedFactorIndex].year} projection)` : ''}</p>
+              <p className="text-sm text-gray-500">{t("input.iasDesc")}</p>
+              <p className="text-sm text-gray-500">{t("input.iasHourly")} {IASH.toFixed(2)}€</p>
+              <p className="text-sm text-gray-500">{t("input.baseRateFactor")} {activeFactor.toFixed(4)}{isProjection ? ` (${FACTOR_ROADMAP[selectedFactorIndex].year} ${t("input.projection")})` : ''}</p>
               {internalMode && (
                 <div className="mt-2">
-                  <label className="text-sm font-bold block mb-1">Factor Projection</label>
+                  <label className="text-sm font-bold block mb-1">{t("input.factorProjection")}</label>
                   <select
                     className="w-full p-2 border rounded text-sm"
                     value={selectedFactorIndex}
@@ -535,7 +568,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                   </select>
                   {isProjection && (
                     <div className="mt-1 p-2 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 font-medium">
-                      ⚠ Projection — not the current formula
+                      {t("input.projectionWarning")}
                     </div>
                   )}
                 </div>
@@ -543,7 +576,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
 
             <div>
-              <label className="font-bold block mb-1">Age: {age}</label>
+              <label className="font-bold block mb-1">{t("input.age")} {age}</label>
               <input
                 type="range"
                 min={18}
@@ -554,14 +587,14 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 className="w-full"
               />
               <p className="text-sm text-gray-500">
-                Seniority: {Math.max(0, age - 23)} years
-                {age > 23 + MAX_SENIORITY && ` (capped at ${MAX_SENIORITY} for calculations)`}
+                {t("input.seniority")} {Math.max(0, age - 23)} {t("input.years")}
+                {age > 23 + MAX_SENIORITY && ` (${t("input.cappedAt")} ${MAX_SENIORITY} ${t("input.forCalculations")})`}
               </p>
             </div>
 
             {internalMode && (
               <div className="flex items-center justify-between">
-                <label className="font-bold">Intern</label>
+                <label className="font-bold">{t("input.intern")}</label>
                 <input
                   type="checkbox"
                   checked={isIntern}
@@ -571,7 +604,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             )}
 
             <div className="flex items-center justify-between">
-              <label className="font-bold">Member</label>
+              <label className="font-bold">{t("input.member")}</label>
               <input
                 type="checkbox"
                 checked={isMember}
@@ -580,7 +613,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="font-bold">Ex Board Chair</label>
+              <label className="font-bold">{t("input.exBoardChair")}</label>
               <input
                 type="checkbox"
                 checked={isFormerChair}
@@ -589,7 +622,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
 
             <div>
-              <label className="font-bold block mb-1">Economic Participation: {balance}€</label>
+              <label className="font-bold block mb-1">{t("input.economicParticipation")} {balance}€</label>
               <input
                 type="range"
                 min={0}
@@ -600,44 +633,64 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 className="w-full"
               />
               <p className="text-sm text-gray-500">
-                Economic Participation boost: {balance > 0 ? Math.min(50, (balance / 10000) * 50).toFixed(1) + '%' : 'None'}
+                {t("input.economicBoost")} {balance > 0 ? Math.min(50, (balance / 10000) * 50).toFixed(1) + '%' : t("input.none")}
               </p>
             </div>
 
             <div>
-              <label className="font-bold block mb-1">Academic Qualification</label>
+              <label className="font-bold block mb-1">{t("input.academicQualification")}</label>
               <select
                 className="w-full p-2 border rounded"
                 value={academicQualification}
                 onChange={(e) => setAcademicQualification(e.target.value)}
               >
-                <option value="none">None</option>
-                <option value="bachelor">Bachelor's Degree</option>
-                <option value="master">Master's Degree</option>
-                <option value="phd">PhD</option>
+                <option value="none">{t("input.none")}</option>
+                <option value="bachelor">{t("input.bachelor")}</option>
+                <option value="master">{t("input.master")}</option>
+                <option value="phd">{t("input.phd")}</option>
               </select>
             </div>
 
             <div>
-              <label className="font-bold block mb-1">Work Tier</label>
+              <label className="font-bold block mb-1">{t("input.workTier")}</label>
               <select
                 className="w-full p-2 border rounded"
                 value={workTier}
-                onChange={(e) => setWorkTier(e.target.value as keyof typeof WORK_TIERS)}
+                onChange={(e) => setWorkTier(e.target.value as keyof typeof WORK_TIER_MULTIPLIERS)}
               >
-                {Object.entries(WORK_TIERS).map(([key, tier]) => (
+                {(Object.keys(WORK_TIER_MULTIPLIERS) as Array<keyof typeof WORK_TIER_MULTIPLIERS>).map((key) => (
                   <option key={key} value={key}>
-                    {tier.label} (×{tier.multiplier})
+                    {workTierInfo[key].label} (×{WORK_TIER_MULTIPLIERS[key]})
                   </option>
                 ))}
               </select>
               <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-gray-700">
-                {WORK_TIERS[workTier].description}
+                {workTierInfo[workTier].description}
               </div>
             </div>
 
+            {serviceType === "commercial" && (
+              <div>
+                <label className="font-bold block mb-1">{t("input.clientCountry")}</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={clientCountry}
+                  onChange={(e) => setClientCountry(e.target.value)}
+                >
+                  {Object.entries(CLIENT_VAT_RATES).map(([code, { label }]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-sm text-gray-500 mt-1">
+                  {t("input.vatRecovery")} {Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2)}% | {t("input.effectiveMemberFee")} {Math.round(Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2) / 100) * 100)}%
+                </p>
+              </div>
+            )}
+
             <div>
-              <label className="font-bold block mb-1">Formula Display</label>
+              <label className="font-bold block mb-1">{t("input.formulaDisplay")}</label>
               <select
                 className="w-full p-2 border rounded"
                 value={formulaStyle}
@@ -652,29 +705,26 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
 
         <div className="border rounded-lg p-4 shadow-sm flex-1">
           <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-bold">Calculation Result</h3>
+            <h3 className="text-lg font-bold">{t("result.title")}</h3>
           </div>
           <div>
-            <div className="text-3xl font-bold text-center p-4 border rounded bg-gray-50">
-              {(() => {
-                if (serviceType === "internal") {
-                  return `${tierRates.internal.toFixed(2)}€ per hour`;
-                } else if (serviceType === "commercial") {
-                  if (isStrategic) {
-                    return includeVAT
-                      ? `${tierRates.commercialStrategicVAT.toFixed(2)}€ per hour (with VAT)`
-                      : `${tierRates.commercialStrategic.toFixed(2)}€ per hour`;
-                  } else {
-                    return includeVAT
-                      ? `${tierRates.commercialVAT.toFixed(2)}€ per hour (with VAT)`
-                      : `${tierRates.commercial.toFixed(2)}€ per hour`;
-                  }
-                }
-              })()}
+            <div className="text-center p-4 border rounded bg-gray-50">
+              {serviceType === "internal" ? (
+                <>
+                  <div className="text-3xl font-bold">{tierRates.internalRate.toFixed(2)}€ {t("result.perHour")}</div>
+                  <div className="text-sm text-gray-500 mt-1">{t("result.internalRate")} {Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}% {t("result.discount")}</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{tierRates.clientTotal.toFixed(2)}€ {t("result.perHour")}</div>
+                  <div className="text-sm text-gray-500 mt-1">{t("result.clientPaysInclusion")}</div>
+                  <div className="text-lg font-medium text-green-700 mt-2">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
+                </>
+              )}
             </div>
 
             <div className="mt-6">
-              <h4 className="text-lg font-bold mb-2">Calculation Steps:</h4>
+              <h4 className="text-lg font-bold mb-2">{t("result.calculationSteps")}</h4>
               <div className="p-3 bg-gray-50 rounded">
                 <ol className="list-decimal pl-5 space-y-1">
                   {calculationSteps.map((step, index) => (
@@ -685,106 +735,116 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
             </div>
 
             <div className="mt-6">
-              <h4 className="text-lg font-bold mb-2">Service Options:</h4>
+              <h4 className="text-lg font-bold mb-2">{t("result.serviceOptions")}</h4>
               <div className="p-4 bg-gray-100 rounded border">
                 <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-                  <div className="font-bold mb-1">Selected Work Tier:</div>
-                  <div className="text-lg">{WORK_TIERS[workTier].label} (×{WORK_TIERS[workTier].multiplier})</div>
+                  <div className="font-bold mb-1">{t("result.selectedWorkTier")}</div>
+                  <div className="text-lg">{workTierInfo[workTier].label} (×{WORK_TIER_MULTIPLIERS[workTier]})</div>
                   <div className="text-sm text-gray-600 mt-1">
-                    {workTier === 'execution' && 'Base rate applied'}
-                    {workTier === 'guidance' && '+50% multiplier applied'}
-                    {workTier === 'advisory' && '+100% multiplier applied (×2)'}
+                    {workTier === 'execution' && t("tier.baseRate")}
+                    {workTier === 'guidance' && t("tier.guidance50")}
+                    {workTier === 'advisory' && t("tier.advisory100")}
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  {internalMode ? (
-                    <>
-                      <div className="font-bold mb-2">Service Type:</div>
-                      <div className="flex space-x-4">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="serviceType"
-                            value="internal"
-                            checked={serviceType === "internal"}
-                            onChange={() => setServiceType("internal")}
-                            className="mr-2"
-                          />
-                          Internal (0%)
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="serviceType"
-                            value="commercial"
-                            checked={serviceType === "commercial"}
-                            onChange={() => setServiceType("commercial")}
-                            className="mr-2"
-                          />
-                          Commercial (+50%)
-                        </label>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-
-                {serviceType === "commercial" && (
-                  <div className="mb-4 ml-6">
-                    <div className="flex items-center mb-2">
-                      <input
-                        type="checkbox"
-                        checked={isStrategic}
-                        onChange={(e) => setIsStrategic(e.target.checked)}
-                        className="mr-2"
-                      />
-                      <label>Strategic (-25% of commercial value)</label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={includeVAT}
-                        onChange={(e) => setIncludeVAT(e.target.checked)}
-                        className="mr-2"
-                      />
-                      <label>Include VAT (23%)</label>
+                {internalMode && (
+                  <div className="mb-4">
+                    <div className="font-bold mb-2">{t("result.serviceType")}</div>
+                    <div className="flex space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="serviceType"
+                          value="internal"
+                          checked={serviceType === "internal"}
+                          onChange={() => setServiceType("internal")}
+                          className="mr-2"
+                        />
+                        {t("result.internal")} (-{Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}%)
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="serviceType"
+                          value="commercial"
+                          checked={serviceType === "commercial"}
+                          onChange={() => setServiceType("commercial")}
+                          className="mr-2"
+                        />
+                        {t("result.commercial")} (+{Math.round(COOP_MARGIN * 100)}% {t("result.margin")} + {vatLabel})
+                      </label>
                     </div>
                   </div>
                 )}
 
                 <div className="mt-4 pt-4 border-t">
-                  <div className="font-bold mb-2">Final Value:</div>
-                  <div className="text-2xl font-bold">
-                    {(() => {
-                      if (serviceType === "internal") {
-                        return `${tierRates.internal.toFixed(2)}€`;
-                      } else if (serviceType === "commercial") {
-                        if (isStrategic) {
-                          return includeVAT
-                            ? `${tierRates.commercialStrategicVAT.toFixed(2)}€ (with VAT)`
-                            : `${tierRates.commercialStrategic.toFixed(2)}€`;
-                        } else {
-                          return includeVAT
-                            ? `${tierRates.commercialVAT.toFixed(2)}€ (with VAT)`
-                            : `${tierRates.commercial.toFixed(2)}€`;
-                        }
-                      }
-                    })()}
-                  </div>
+                  {serviceType === "commercial" ? (
+                    <>
+                      <div className="font-bold mb-3">{t("result.breakdown")}</div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>{t("result.memberRate")}</span>
+                          <span className="font-medium">{tierRates.memberRate.toFixed(2)}€</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span className="group relative cursor-help">
+                            + {t("result.coopMargin")} ({Math.round(COOP_MARGIN * 100)}%)
+                            <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                              {t("result.coopMarginTooltip", { pct: Math.round(COOP_MARGIN * 100) })}
+                            </span>
+                          </span>
+                          <span>{tierRates.coopMarginAmount.toFixed(2)}€</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-1">
+                          <span>{t("result.subtotal")}</span>
+                          <span className="font-medium">{tierRates.clientBeforeVAT.toFixed(2)}€</span>
+                        </div>
+                        {tierRates.vatAmount > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>+ {vatLabel} ({Math.round(CLIENT_VAT_RATES[clientCountry].rate * 100)}%)</span>
+                            <span>{tierRates.vatAmount.toFixed(2)}€</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t pt-1 text-lg font-bold">
+                          <span>{t("result.clientPays")}</span>
+                          <span>{tierRates.clientTotal.toFixed(2)}€</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+                        <div className="font-bold text-green-800">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
+                        <div className="text-sm text-green-700">{t("result.effectiveFee")} {Math.round(tierRates.effectiveFee * 100)}% {t("result.afterVatRecovery")}</div>
+                        <div className="text-sm text-green-700">{t("result.netAfterFee")} {tierRates.memberEffectiveEarnings.toFixed(2)}€/{hourLabel}</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-bold mb-2">{t("result.internalValue")}</div>
+                      <div className="text-2xl font-bold">{tierRates.internalRate.toFixed(2)}€</div>
+                      <div className="mt-2 text-sm text-gray-600">
+                        <span className="group relative cursor-help">
+                          {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(MEMBER_INTERNAL_DISCOUNT * 100) })}
+                          <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                            {t("result.internalTooltip")}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">{t("result.noMarginNoVat")}</div>
+                    </>
+                  )}
                 </div>
 
                 {internalMode && (
                   <div className="mt-4 pt-4 border-t">
-                    <div className="font-bold mb-2">Value Range:</div>
+                    <div className="font-bold mb-2">{t("result.valueRange")}</div>
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="text-sm">Minimum (Internal)</div>
-                        <div className="font-bold">{tierRates.internal.toFixed(2)}€</div>
+                        <div className="text-sm">{t("result.minimum")}</div>
+                        <div className="font-bold">{tierRates.internalRate.toFixed(2)}€</div>
                       </div>
                       <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
                       <div>
-                        <div className="text-sm">Maximum (Commercial + VAT)</div>
-                        <div className="font-bold">{tierRates.commercialVAT.toFixed(2)}€</div>
+                        <div className="text-sm">{t("result.maximum")}</div>
+                        <div className="font-bold">{tierRates.clientTotal.toFixed(2)}€</div>
                       </div>
                     </div>
                   </div>
@@ -797,11 +857,10 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
 
       <div className="border rounded-lg p-4 shadow-sm">
         <div className="border-b pb-2 mb-4">
-          <h3 className="text-lg font-bold">Seniority Bonus Growth Curve</h3>
-          <p className="text-sm text-gray-500">Note: Seniority is capped at {MAX_SENIORITY} years (age {23 + MAX_SENIORITY})</p>
+          <h3 className="text-lg font-bold">{t("chart.seniorityTitle")}</h3>
+          <p className="text-sm text-gray-500">{t("chart.seniorityNote", { max: MAX_SENIORITY, age: 23 + MAX_SENIORITY })}</p>
         </div>
         <div className="h-64 relative">
-          {/* The chart container */}
           <div className="absolute inset-0 flex items-end pt-10 pb-8">
             {chartData.map((point, index) => (
               <div
@@ -815,24 +874,20 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                     height: `${(point.bonus / Math.max(...chartData.map(d => d.bonus))) * 80}%`,
                     opacity: 0.7 + (point.seniority / (MAX_SENIORITY + 10)) * 0.3
                   }}
-                  title={`${point.seniority} years: ${point.bonus.toFixed(2)}€`}
+                  title={`${point.seniority} ${t("input.years")}: ${point.bonus.toFixed(2)}€`}
                 ></div>
               </div>
             ))}
           </div>
-
-          {/* Y-axis label */}
           <div className="absolute top-2 left-2 text-sm text-gray-500">
-            Seniority bonus value (€)
+            {t("chart.seniorityYAxis")}
           </div>
-
-          {/* X-axis labels - positioned separately */}
           <div className="absolute bottom-0 left-0 right-0 flex justify-between px-4">
             <div className="text-xs">0y</div>
             <div className="text-xs">5y</div>
             <div className="text-xs">10y</div>
             <div className="text-xs">15y</div>
-            <div className="text-xs">{MAX_SENIORITY}y (cap)</div>
+            <div className="text-xs">{MAX_SENIORITY}y {t("chart.cap")}</div>
             <div className="text-xs text-gray-400">{MAX_SENIORITY + 5}y</div>
             <div className="text-xs text-gray-400">{MAX_SENIORITY + 10}y</div>
           </div>
@@ -841,14 +896,14 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
 
       <div className="border rounded-lg p-4 shadow-sm">
         <div className="border-b pb-2 mb-4">
-          <h3 className="text-lg font-bold">Hourly Rate By Age (with current settings)</h3>
+          <h3 className="text-lg font-bold">{t("chart.ageTitle")}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr>
                 {ageRangeData.map(item => (
-                  <th key={item.age} className="p-2 border text-center">Age {item.age}</th>
+                  <th key={item.age} className="p-2 border text-center">{t("chart.age")} {item.age}</th>
                 ))}
               </tr>
             </thead>
@@ -857,7 +912,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
                 {ageRangeData.map(item => (
                   <td key={item.age} className={`p-2 border text-center ${item.age > 23 + MAX_SENIORITY ? 'bg-gray-100' : ''}`}>
                     {item.hourly.toFixed(2)}€
-                    {item.age > 23 + MAX_SENIORITY && <span className="text-xs text-gray-500"> (capped)</span>}
+                    {item.age > 23 + MAX_SENIORITY && <span className="text-xs text-gray-500"> {t("chart.capped")}</span>}
                   </td>
                 ))}
               </tr>
@@ -869,7 +924,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
       {formulaStyle === "mathjax" ? (
         <div className="border rounded-lg p-4 shadow-sm">
           <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-bold">Mathematical Formula</h3>
+            <h3 className="text-lg font-bold">{t("formula.mathTitle")}</h3>
           </div>
           <div
             ref={mathJaxRef}
@@ -879,7 +934,7 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
       ) : (
         <div className="border rounded-lg p-4 shadow-sm">
           <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-bold">Formula (ASCII)</h3>
+            <h3 className="text-lg font-bold">{t("formula.asciiTitle")}</h3>
           </div>
           <div className="p-4 bg-gray-50 rounded">
             <pre className="whitespace-pre-wrap break-all font-mono text-sm">
@@ -891,87 +946,106 @@ Hourly = round[(BaseHourly + SeniorityBonus(s)) *
 
       <div className="border rounded-lg p-4 shadow-sm mt-6">
         <div className="border-b pb-2 mb-4">
-          <h3 className="text-lg font-bold text-center">Detailed Explanation</h3>
+          <h3 className="text-lg font-bold text-center">{t("explain.title")}</h3>
         </div>
 
         <div className="flex flex-col gap-4 text-center">
-          {/* Base Calculation */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Base Calculation</h4>
-            <p className="mb-2">The hourly rate starts at {(IASH * activeFactor).toFixed(2)}€ for individuals with no seniority (age 23 or younger).</p>
-            <p>This base rate is calculated as {activeFactor.toFixed(4)} times the hourly equivalent of the IAS ({IASH.toFixed(2)}€), ensuring the base value remains proportional to the current IAS.</p>
+            <h4 className="text-lg font-bold mb-2">{t("explain.baseCalc.title")}</h4>
+            <p className="mb-2">{t("explain.baseCalc.p1", { rate: (IASH * activeFactor).toFixed(2) })}</p>
+            <p>{t("explain.baseCalc.p2", { factor: activeFactor.toFixed(4), iash: IASH.toFixed(2) })}</p>
           </div>
 
-          {/* Seniority Growth Function */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Seniority Growth Function f(s)</h4>
-            <p className="mb-2">Seniority is capped at {MAX_SENIORITY} years, meaning that after age {23 + MAX_SENIORITY}, additional years do not increase the hourly rate.</p>
-            <p className="mb-2">The formula uses a continuous growth function with three components that together create a natural progression curve:</p>
-
+            <h4 className="text-lg font-bold mb-2">{t("explain.seniority.title")}</h4>
+            <p className="mb-2">{t("explain.seniority.p1", { max: MAX_SENIORITY, age: 23 + MAX_SENIORITY })}</p>
+            <p className="mb-2">{t("explain.seniority.p2")}</p>
             <div className="flex flex-col items-center mt-2">
               <div className="mb-2">
-                <strong>1. Early Career Component:</strong> <code>4 × (1 - e<sup>-0.15s</sup>)</code><br />
-                This creates rapid initial growth that gradually slows, providing most of the increase during the first 10 years.
+                <strong>{t("explain.seniority.early.title")}</strong> <code>4 × (1 - e<sup>-0.15s</sup>)</code><br />
+                {t("explain.seniority.early.desc")}
               </div>
               <div className="mb-2">
-                <strong>2. Mid-Career Component:</strong> <code>0.08 × max(0, s-10) × e<sup>-0.1×max(0,s-10)</sup></code><br />
-                This adds moderate growth that kicks in after 10 years but naturally tapers off over time.
+                <strong>{t("explain.seniority.mid.title")}</strong> <code>0.08 × max(0, s-10) × e<sup>-0.1×max(0,s-10)</sup></code><br />
+                {t("explain.seniority.mid.desc")}
               </div>
               <div className="mb-2">
-                <strong>3. Late Career Component:</strong> <code>0.02 × max(0, s-15)</code><br />
-                This adds minimal linear growth after 15 years, until the cap at {MAX_SENIORITY} years.
+                <strong>{t("explain.seniority.late.title")}</strong> <code>0.02 × max(0, s-15)</code><br />
+                {t("explain.seniority.late.desc", { max: MAX_SENIORITY })}
               </div>
             </div>
-
-            <p className="mt-3">Together, these components form the function f(s) in the unified formula, which is multiplied by IAS/176 to determine the seniority bonus.</p>
+            <p className="mt-3">{t("explain.seniority.summary")}</p>
           </div>
 
-          {/* Status Modifiers */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Status Modifiers</h4>
+            <h4 className="text-lg font-bold mb-2">{t("explain.status.title")}</h4>
             <div className="flex flex-col items-center mb-2">
-              <div className="mb-1">• Ex Board Chair: +10%</div>
-              <div className="mb-1">• Intern: -40%</div>
-              <div className="mb-1">• Member: +10%</div>
+              <div className="mb-1">• {t("input.exBoardChair")}: +10%</div>
+              <div className="mb-1">• {t("input.intern")}: -40%</div>
+              <div className="mb-1">• {t("input.member")}: +10%</div>
             </div>
-            <p>These modifiers are multiplicative if multiple apply to the same person.</p>
+            <p>{t("explain.status.multiplicative")}</p>
           </div>
 
-          {/* Economic Participation Modifier */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Economic Participation Modifier</h4>
-            <p className="mb-2">For economic participation above 0€, a bonus of up to 50% is applied, scaling linearly up to 10,000€.</p>
-            <p>Bonus percentage = min(50%, (economic participation / 10,000) × 50%)</p>
+            <h4 className="text-lg font-bold mb-2">{t("explain.economicMod.title")}</h4>
+            <p className="mb-2">{t("explain.economicMod.p1")}</p>
+            <p>{t("explain.economicMod.formula")}</p>
           </div>
 
-          {/* Academic Qualification Bonus */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Academic Qualification Bonus (non-cumulative)</h4>
+            <h4 className="text-lg font-bold mb-2">{t("explain.qualification.title")}</h4>
             <div className="flex flex-col items-center mb-2">
-              <div className="mb-1">• Bachelor's Degree: +12%</div>
-              <div className="mb-1">• Master's Degree: +20%</div>
-              <div className="mb-1">• PhD: +35%</div>
+              <div className="mb-1">• {t("input.bachelor")}: +12%</div>
+              <div className="mb-1">• {t("input.master")}: +20%</div>
+              <div className="mb-1">• {t("input.phd")}: +35%</div>
             </div>
-            <p>Only the highest qualification bonus applies.</p>
+            <p>{t("explain.qualification.highest")}</p>
           </div>
 
-          {/* Final Adjustment */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Final Adjustment</h4>
-            <p>The result is rounded to the nearest quarter of a euro (0.25€).</p>
+            <h4 className="text-lg font-bold mb-2">{t("explain.final.title")}</h4>
+            <p>{t("explain.final.p1")}</p>
           </div>
 
-          {/* Service Types */}
           <div>
-            <h4 className="text-lg font-bold mb-2">Service Types</h4>
+            <h4 className="text-lg font-bold mb-2">{t("explain.serviceTypes.title")}</h4>
             <div className="flex flex-col items-center">
-              <div className="mb-2"><strong>• Internal:</strong> For services between members, within the cooperative ecosystem. Reference value without change (0%).</div>
-              <div className="mb-2"><strong>• Commercial:</strong> For services to third parties, invoiced through the cooperative. Additional fee of 50% on the reference value.</div>
-              <div className="mb-2"><strong>• Strategic:</strong> (Option for commercial services) For non-profit initiatives, local or of strategic interest. 25% reduction on the commercial value.</div>
-              <div className="mb-2"><strong>• VAT:</strong> Option to include Value Added Tax (23%) in the final calculation.</div>
+              <div className="mb-2"><strong>• {t("result.commercial")}:</strong> {t("explain.serviceTypes.commercial", { pct: Math.round(COOP_MARGIN * 100) })}</div>
+              <div className="mb-2"><strong>• {t("result.internal")}:</strong> {t("explain.serviceTypes.internal", { pct: Math.round(MEMBER_INTERNAL_DISCOUNT * 100) })}</div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-bold mb-2">{t("explain.coopMargin.title")}</h4>
+            <div className="flex flex-col items-center">
+              <div className="mb-2">{t("explain.coopMargin.intro", { pct: Math.round(BASE_VAT * 100) })}</div>
+              <div className="mb-1">• {t("explain.coopMargin.margin")} {Math.round(COOP_MARGIN * 100)}%</div>
+              <div className="mb-1">• {t("explain.coopMargin.recovery")}</div>
+              <div className="mb-1">• {t("explain.coopMargin.minFee")} {Math.round(MIN_EFFECTIVE_FEE * 100)}%</div>
+              <div className="mb-1">• {t("explain.coopMargin.effectiveFee")}</div>
+              <div className="mt-2">{t("explain.coopMargin.ptExample")}</div>
+              <div className="mb-2">{t("explain.coopMargin.euExample")}</div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Footer with language selector */}
+      <div className="border-t pt-4 mt-2 flex justify-center items-center gap-2 text-sm text-gray-500">
+        <span>{t("footer.language")}</span>
+        <button
+          onClick={() => handleLocaleChange("pt")}
+          className={`px-2 py-1 rounded ${locale === "pt" ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-100"}`}
+        >
+          PT
+        </button>
+        <button
+          onClick={() => handleLocaleChange("en")}
+          className={`px-2 py-1 rounded ${locale === "en" ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-100"}`}
+        >
+          EN
+        </button>
       </div>
     </div>
   );
