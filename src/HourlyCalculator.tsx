@@ -323,7 +323,7 @@ const HourlyCalculator = () => {
     const clientTotal = clientBeforeVAT + vatAmount;
 
     // Internal
-    const internalRate = memberRate * (1 - effectiveMargin);
+    const internalRate = memberRate * (1 - MEMBER_INTERNAL_DISCOUNT);
 
     setTierRates({
       memberRate,
@@ -778,13 +778,25 @@ Internal:
                 </>
               ) : (
                 <>
-                  <div className="text-sm text-gray-600">
-                    <span className="group relative cursor-help">
-                      {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(tierRates.effectiveMargin * 100) })}
-                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                        {t("result.internalTooltip")}
+                  <div className="font-bold mb-3">{t("result.breakdown")}</div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>{t("result.memberRate")}</span>
+                      <span className="font-medium">{tierRates.memberRate.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span className="group relative cursor-help">
+                        - {t("result.internalDiscount")} ({Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}%)
+                        <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                          {t("result.internalTooltip")}
+                        </span>
                       </span>
-                    </span>
+                      <span>-{(tierRates.memberRate * MEMBER_INTERNAL_DISCOUNT).toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1 text-lg font-bold">
+                      <span>Total</span>
+                      <span>{tierRates.internalRate.toFixed(2)}€</span>
+                    </div>
                   </div>
                 </>
               )}

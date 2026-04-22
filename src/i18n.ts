@@ -88,6 +88,7 @@ const translations = {
     pt: '"Interno" aplica-se quando o cliente é: um projeto non-profit da cooperativa (workshops), um projeto que a cooperativa apoia (Sigo), uma troca entre membros, ou uma troca com uma startup associada. Regra: se a cooperativa fatura, NÃO é interno. Sem margem cooperativa. Sem IVA.'
   },
   "result.noMarginNoVat": { en: "No cooperative margin. No VAT.", pt: "Sem margem cooperativa. Sem IVA." },
+  "result.internalDiscount": { en: "Member discount", pt: "Desconto do membro" },
   "result.valueRange": { en: "Value Range:", pt: "Intervalo de Valores:" },
   "result.minimum": { en: "Minimum (Internal)", pt: "Mínimo (Interno)" },
   "result.maximum": { en: "Maximum (Client + VAT)", pt: "Máximo (Cliente + IVA)" },
