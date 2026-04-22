@@ -313,7 +313,7 @@ const HourlyCalculator = () => {
 
     // Effective coop margin: base margin minus VAT recovery (coop's internal fiscal benefit)
     const clientVatRate = CLIENT_VAT_RATES[clientCountry].rate;
-    const vatRecovery = Math.floor(clientVatRate * 100 / 2) / 100;
+    const vatRecovery = Math.floor(clientVatRate * 100 / 3) / 100;
     const effectiveMargin = Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - vatRecovery);
 
     // Commercial — what the client pays
@@ -421,7 +421,7 @@ const HourlyCalculator = () => {
         \\text{CoopMargin} &= \\lfloor \\text{VAT}_{\\text{PT}} \\times \\tfrac{2}{3} \\rfloor = ${Math.round(COOP_MARGIN * 100)}\\% \\\\[8pt]
         \\text{ClientPays} &= \\text{MemberRate} \\times (1 + \\text{CoopMargin}) \\times (1 + \\text{VAT}_{\\text{client}}) \\\\[8pt]
         \\text{Internal} &= \\text{MemberRate} \\times (1 - \\text{CoopMargin}) \\\\[8pt]
-        \\text{VATRecovery} &= \\lfloor \\text{VAT}_{\\text{client}} / 2 \\rfloor \\\\[8pt]
+        \\text{VATRecovery} &= \\lfloor \\text{VAT}_{\\text{client}} / 3 \\rfloor \\\\[8pt]
         \\text{EffectiveFee} &= \\max\\left(\\lfloor \\text{CoopMargin} / 3 \\rfloor,\\; \\text{CoopMargin} - \\text{VATRecovery}\\right)
         \\end{align}
         $$
@@ -487,7 +487,7 @@ MinFee     = floor(CoopMargin / 3) = ${Math.round(MIN_EFFECTIVE_FEE * 100)}%
 
 Commercial:
   ClientPays = MemberRate × (1 + CoopMargin) × (1 + VAT_client)
-  VATRecovery = floor(VAT_client / 2)
+  VATRecovery = floor(VAT_client / 3)
   EffectiveFee = max(MinFee, CoopMargin - VATRecovery)
   MemberNets = MemberRate × (1 - EffectiveFee)
 
@@ -679,7 +679,7 @@ Internal:
                   ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
-                  {t("result.coopMargin")}: {Math.round(Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2) / 100) * 100)}%
+                  {t("result.coopMargin")}: {Math.round(Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 3) / 100) * 100)}%
                 </p>
               </div>
             )}
@@ -735,7 +735,7 @@ Internal:
                       onChange={() => setServiceType("commercial")}
                       className="mr-2"
                     />
-                    {t("result.commercial")} (+{Math.round(COOP_MARGIN * 100)}% {t("result.margin")} + {vatLabel})
+                    {t("result.commercial")} ({t("result.margin")} + {vatLabel})
                   </label>
                 </div>
               </div>

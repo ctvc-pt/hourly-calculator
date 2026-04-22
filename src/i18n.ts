@@ -170,8 +170,8 @@ const translations = {
   },
   "explain.serviceTypes.title": { en: "Service Types", pt: "Tipos de Serviço" },
   "explain.serviceTypes.commercial": {
-    en: "For services to third parties, invoiced through the cooperative. The base cooperative margin is {pct}% (= floor(PT_VAT x 2/3)). When the client pays VAT, the cooperative recovers approximately half through input deductions — this recovery is subtracted from the margin, reducing what the client and member actually pay. For example, with Portuguese VAT (23%), the effective margin is 5% instead of 15%.",
-    pt: "Para serviços a terceiros, faturados através da cooperativa. A margem base da cooperativa é {pct}% (= floor(IVA_PT x 2/3)). Quando o cliente paga IVA, a cooperativa recupera aproximadamente metade através de deduções — essa recuperação é subtraída à margem, reduzindo o que o cliente e o membro efetivamente pagam. Por exemplo, com IVA português (23%), a margem efetiva é 5% em vez de 15%."
+    en: "For services to third parties, invoiced through the cooperative. The base cooperative margin is {pct}% (= floor(PT_VAT x 2/3)). When the client pays VAT, the cooperative recovers approximately a third through input deductions — this recovery is subtracted from the margin, reducing what the client and member actually pay. For example, with Portuguese VAT (23%), the effective margin is 8% instead of 15%.",
+    pt: "Para serviços a terceiros, faturados através da cooperativa. A margem base da cooperativa é {pct}% (= floor(IVA_PT x 2/3)). Quando o cliente paga IVA, a cooperativa recupera aproximadamente um terço através de deduções — essa recuperação é subtraída à margem, reduzindo o que o cliente e o membro efetivamente pagam. Por exemplo, com IVA português (23%), a margem efetiva é 8% em vez de 15%."
   },
   "explain.serviceTypes.internal": {
     en: "For non-profit cooperative projects (workshops), projects the cooperative supports (Sigo), exchanges between members, or exchanges with associated startups. The member gives a discount equal to the effective cooperative margin. No cooperative margin is applied. No VAT. Rule: if the cooperative invoices the client, it is NOT internal.",
@@ -183,12 +183,12 @@ const translations = {
     pt: "Todas as constantes derivam da taxa de IVA portuguesa ({pct}%) através de frações simples:"
   },
   "explain.coopMargin.margin": { en: "Cooperative margin: floor(VAT x 2/3) =", pt: "Margem cooperativa: floor(IVA x 2/3) =" },
-  "explain.coopMargin.recovery": { en: "VAT recovery: floor(clientVAT / 2)", pt: "Recuperação de IVA: floor(IVA_cliente / 2)" },
+  "explain.coopMargin.recovery": { en: "VAT recovery: floor(clientVAT / 3)", pt: "Recuperação de IVA: floor(IVA_cliente / 3)" },
   "explain.coopMargin.minFee": { en: "Minimum fee: floor(margin / 3) =", pt: "Fee mínima: floor(margem / 3) =" },
   "explain.coopMargin.effectiveFee": { en: "Effective member fee: max(minFee, margin - recovery)", pt: "Fee efetiva do membro: max(feeMin, margem - recuperação)" },
   "explain.coopMargin.ptExample": {
-    en: "For Portuguese clients (23% VAT): recovery = 11%, effective fee = max(5%, 15%-11%) = 5%",
-    pt: "Para clientes portugueses (23% IVA): recuperação = 11%, fee efetiva = max(5%, 15%-11%) = 5%"
+    en: "For Portuguese clients (23% VAT): recovery = 7%, effective margin = max(5%, 15%-7%) = 8%",
+    pt: "Para clientes portugueses (23% IVA): recuperação = 7%, margem efetiva = max(5%, 15%-7%) = 8%"
   },
   "explain.coopMargin.euExample": {
     en: "For EU B2B / non-EU (0% VAT): recovery = 0%, effective fee = 15%",
