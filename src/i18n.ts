@@ -171,12 +171,12 @@ const translations = {
   },
   "explain.serviceTypes.title": { en: "Service Types", pt: "Tipos de Serviço" },
   "explain.serviceTypes.commercial": {
-    en: "For services to third parties, invoiced through the cooperative. The cooperative adds a {pct}% margin (= floor(VAT x 2/3)) on the member's rate, plus VAT based on the client's country. The member's effective fee is reduced when VAT is charged, as the cooperative recovers approximately half of the VAT through input deductions.",
-    pt: "Para serviços a terceiros, faturados através da cooperativa. A cooperativa adiciona uma margem de {pct}% (= floor(IVA x 2/3)) sobre a taxa do membro, mais IVA conforme o país do cliente. A fee efetiva do membro é reduzida quando há IVA, pois a cooperativa recupera aproximadamente metade do IVA através de deduções."
+    en: "For services to third parties, invoiced through the cooperative. The base cooperative margin is {pct}% (= floor(PT_VAT x 2/3)). When the client pays VAT, the cooperative recovers approximately half through input deductions — this recovery is subtracted from the margin, reducing what the client and member actually pay. For example, with Portuguese VAT (23%), the effective margin is 5% instead of 15%.",
+    pt: "Para serviços a terceiros, faturados através da cooperativa. A margem base da cooperativa é {pct}% (= floor(IVA_PT x 2/3)). Quando o cliente paga IVA, a cooperativa recupera aproximadamente metade através de deduções — essa recuperação é subtraída à margem, reduzindo o que o cliente e o membro efetivamente pagam. Por exemplo, com IVA português (23%), a margem efetiva é 5% em vez de 15%."
   },
   "explain.serviceTypes.internal": {
-    en: "For non-profit cooperative projects (workshops), projects the cooperative supports (Sigo), exchanges between members, or exchanges with associated startups. The member gives a {pct}% discount (equal to the cooperative margin). No cooperative margin is applied. No VAT. Rule: if the cooperative invoices the client, it is NOT internal.",
-    pt: "Para projetos non-profit da cooperativa (workshops), projetos que a cooperativa apoia (Sigo), trocas entre membros, ou trocas com startups associadas. O membro dá um desconto de {pct}% (igual à margem cooperativa). Sem margem cooperativa. Sem IVA. Regra: se a cooperativa fatura ao cliente, NÃO é interno."
+    en: "For non-profit cooperative projects (workshops), projects the cooperative supports (Sigo), exchanges between members, or exchanges with associated startups. The member gives a discount equal to the effective cooperative margin. No cooperative margin is applied. No VAT. Rule: if the cooperative invoices the client, it is NOT internal.",
+    pt: "Para projetos non-profit da cooperativa (workshops), projetos que a cooperativa apoia (Sigo), trocas entre membros, ou trocas com startups associadas. O membro dá um desconto igual à margem cooperativa efetiva. Sem margem cooperativa. Sem IVA. Regra: se a cooperativa fatura ao cliente, NÃO é interno."
   },
   "explain.coopMargin.title": { en: "Cooperative Margin & VAT Recovery", pt: "Margem Cooperativa & Recuperação de IVA" },
   "explain.coopMargin.intro": {
