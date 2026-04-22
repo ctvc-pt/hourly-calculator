@@ -70,8 +70,8 @@ const translations = {
   "result.memberRate": { en: "Member rate", pt: "Taxa do membro" },
   "result.coopMargin": { en: "Cooperative margin", pt: "Margem cooperativa" },
   "result.coopMarginTooltip": {
-    en: "The cooperative retains {pct}% (= floor(VAT x 2/3)) on the member's rate for operational costs and sustainability. When VAT applies, the coop recovers ~half, reducing the member's effective fee.",
-    pt: "A cooperativa retém {pct}% (= floor(IVA x 2/3)) sobre a taxa do membro para custos operacionais e sustentabilidade. Quando há IVA, a cooperativa recupera ~metade, reduzindo a fee efetiva do membro."
+    en: "The cooperative retains {pct}% on the member's rate for operational costs and sustainability. This margin varies by client country.",
+    pt: "A cooperativa retém {pct}% sobre a taxa do membro para custos operacionais e sustentabilidade. Esta margem varia conforme o país do cliente."
   },
   "result.subtotal": { en: "Subtotal", pt: "Subtotal" },
   "result.clientPays": { en: "Client pays", pt: "Cliente paga" },

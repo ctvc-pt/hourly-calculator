@@ -145,8 +145,7 @@ const HourlyCalculator = () => {
   const [calculationSteps, setCalculationSteps] = useState<string[]>([]);
   const [tierRates, setTierRates] = useState({
     memberRate: 0,
-    memberEffectiveEarnings: 0,
-    effectiveFee: 0,
+    effectiveMargin: 0,
     internalRate: 0,
     clientBeforeVAT: 0,
     vatAmount: 0,
@@ -312,25 +311,23 @@ const HourlyCalculator = () => {
     // Calculate service type rates
     const memberRate = baseRate;
 
-    // VAT from client country
+    // Effective coop margin: base margin minus VAT recovery (coop's internal fiscal benefit)
     const clientVatRate = CLIENT_VAT_RATES[clientCountry].rate;
     const vatRecovery = Math.floor(clientVatRate * 100 / 2) / 100;
-    const effectiveFee = Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - vatRecovery);
+    const effectiveMargin = Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - vatRecovery);
 
     // Commercial — what the client pays
-    const clientBeforeVAT = memberRate * (1 + COOP_MARGIN);
+    const coopMarginAmount = memberRate * effectiveMargin;
+    const clientBeforeVAT = memberRate + coopMarginAmount;
     const vatAmount = clientBeforeVAT * clientVatRate;
     const clientTotal = clientBeforeVAT + vatAmount;
-    const coopMarginAmount = memberRate * COOP_MARGIN;
-    const memberEffectiveEarnings = memberRate * (1 - effectiveFee);
 
     // Internal
-    const internalRate = memberRate * (1 - MEMBER_INTERNAL_DISCOUNT);
+    const internalRate = memberRate * (1 - effectiveMargin);
 
     setTierRates({
       memberRate,
-      memberEffectiveEarnings,
-      effectiveFee,
+      effectiveMargin,
       internalRate,
       clientBeforeVAT,
       vatAmount,
@@ -684,7 +681,7 @@ Internal:
                   ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
-                  {t("input.vatRecovery")} {Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2)}% | {t("input.effectiveMemberFee")} {Math.round(Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2) / 100) * 100)}%
+                  {t("result.coopMargin")}: {Math.round(Math.max(MIN_EFFECTIVE_FEE, COOP_MARGIN - Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2) / 100) * 100)}%
                 </p>
               </div>
             )}
@@ -760,9 +757,9 @@ Internal:
                       </div>
                       <div className="flex justify-between text-gray-600">
                         <span className="group relative cursor-help">
-                          + {t("result.coopMargin")} ({Math.round(COOP_MARGIN * 100)}%)
+                          + {t("result.coopMargin")} ({Math.round(tierRates.effectiveMargin * 100)}%)
                           <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                            {t("result.coopMarginTooltip", { pct: Math.round(COOP_MARGIN * 100) })}
+                            {t("result.coopMarginTooltip", { pct: Math.round(tierRates.effectiveMargin * 100) })}
                           </span>
                         </span>
                         <span>{tierRates.coopMarginAmount.toFixed(2)}€</span>
@@ -784,17 +781,6 @@ Internal:
                     </div>
                     <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
                       <div className="font-bold text-green-800">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
-                      <div className="text-sm text-green-700 group relative cursor-help">
-                        {t("result.effectiveFee")} {Math.round(tierRates.effectiveFee * 100)}% {t("result.afterVatRecovery")}
-                        <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-72 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                          {t("result.effectiveFeeTooltip", {
-                            margin: Math.round(COOP_MARGIN * 100),
-                            recovery: Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2),
-                            fee: Math.round(tierRates.effectiveFee * 100),
-                          })}
-                        </span>
-                      </div>
-                      <div className="text-sm text-green-700">{t("result.netAfterFee")} {tierRates.memberEffectiveEarnings.toFixed(2)}€/{hourLabel}</div>
                     </div>
                   </>
                 ) : (
@@ -803,7 +789,7 @@ Internal:
                     <div className="text-2xl font-bold">{tierRates.internalRate.toFixed(2)}€</div>
                     <div className="mt-2 text-sm text-gray-600">
                       <span className="group relative cursor-help">
-                        {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(MEMBER_INTERNAL_DISCOUNT * 100) })}
+                        {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(tierRates.effectiveMargin * 100) })}
                         <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
                           {t("result.internalTooltip")}
                         </span>
