@@ -77,6 +77,10 @@ const translations = {
   "result.clientPays": { en: "Client pays", pt: "Cliente paga" },
   "result.effectiveFee": { en: "Effective fee:", pt: "Fee efetiva:" },
   "result.afterVatRecovery": { en: "(after VAT recovery)", pt: "(após recuperação de IVA)" },
+  "result.effectiveFeeTooltip": {
+    en: "The coop charges {margin}% to the client, but recovers {recovery}% from VAT. So the member's effective fee is only {fee}% — the coop already earns from VAT recovery.",
+    pt: "A cooperativa cobra {margin}% ao cliente, mas recupera {recovery}% do IVA. Assim, a fee efetiva do membro é apenas {fee}% — a cooperativa já ganha com a recuperação de IVA."
+  },
   "result.netAfterFee": { en: "Net after fee:", pt: "Líquido após fee:" },
   "result.internalValue": { en: "Internal Value:", pt: "Valor Interno:" },
   "result.memberRateWith": { en: "Member rate ({rate}€) with {pct}% discount", pt: "Taxa do membro ({rate}€) com {pct}% de desconto" },

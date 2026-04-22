@@ -708,18 +708,127 @@ Internal:
             <h3 className="text-lg font-bold">{t("result.title")}</h3>
           </div>
           <div>
-            <div className="text-center p-4 border rounded bg-gray-50">
-              {serviceType === "internal" ? (
-                <>
-                  <div className="text-3xl font-bold">{tierRates.internalRate.toFixed(2)}€ {t("result.perHour")}</div>
-                  <div className="text-sm text-gray-500 mt-1">{t("result.internalRate")} {Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}% {t("result.discount")}</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-3xl font-bold">{tierRates.clientTotal.toFixed(2)}€ {t("result.perHour")}</div>
-                  <div className="text-sm text-gray-500 mt-1">{t("result.clientPaysInclusion")}</div>
-                  <div className="text-lg font-medium text-green-700 mt-2">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
-                </>
+            <div className="p-4 bg-gray-100 rounded border">
+              <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+                <div className="font-bold mb-1">{t("result.selectedWorkTier")}</div>
+                <div className="text-lg">{workTierInfo[workTier].label} (×{WORK_TIER_MULTIPLIERS[workTier]})</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {workTier === 'execution' && t("tier.baseRate")}
+                  {workTier === 'guidance' && t("tier.guidance50")}
+                  {workTier === 'advisory' && t("tier.advisory100")}
+                </div>
+              </div>
+
+              {internalMode && (
+                <div className="mb-4">
+                  <div className="font-bold mb-2">{t("result.serviceType")}</div>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="serviceType"
+                        value="internal"
+                        checked={serviceType === "internal"}
+                        onChange={() => setServiceType("internal")}
+                        className="mr-2"
+                      />
+                      {t("result.internal")} (-{Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}%)
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="serviceType"
+                        value="commercial"
+                        checked={serviceType === "commercial"}
+                        onChange={() => setServiceType("commercial")}
+                        className="mr-2"
+                      />
+                      {t("result.commercial")} (+{Math.round(COOP_MARGIN * 100)}% {t("result.margin")} + {vatLabel})
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t">
+                {serviceType === "commercial" ? (
+                  <>
+                    <div className="font-bold mb-3">{t("result.breakdown")}</div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>{t("result.memberRate")}</span>
+                        <span className="font-medium">{tierRates.memberRate.toFixed(2)}€</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span className="group relative cursor-help">
+                          + {t("result.coopMargin")} ({Math.round(COOP_MARGIN * 100)}%)
+                          <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                            {t("result.coopMarginTooltip", { pct: Math.round(COOP_MARGIN * 100) })}
+                          </span>
+                        </span>
+                        <span>{tierRates.coopMarginAmount.toFixed(2)}€</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1">
+                        <span>{t("result.subtotal")}</span>
+                        <span className="font-medium">{tierRates.clientBeforeVAT.toFixed(2)}€</span>
+                      </div>
+                      {tierRates.vatAmount > 0 && (
+                        <div className="flex justify-between text-gray-600">
+                          <span>+ {vatLabel} ({Math.round(CLIENT_VAT_RATES[clientCountry].rate * 100)}%)</span>
+                          <span>{tierRates.vatAmount.toFixed(2)}€</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t pt-1 text-lg font-bold">
+                        <span>{t("result.clientPays")}</span>
+                        <span>{tierRates.clientTotal.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+                      <div className="font-bold text-green-800">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
+                      <div className="text-sm text-green-700 group relative cursor-help">
+                        {t("result.effectiveFee")} {Math.round(tierRates.effectiveFee * 100)}% {t("result.afterVatRecovery")}
+                        <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-72 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                          {t("result.effectiveFeeTooltip", {
+                            margin: Math.round(COOP_MARGIN * 100),
+                            recovery: Math.floor(CLIENT_VAT_RATES[clientCountry].rate * 100 / 2),
+                            fee: Math.round(tierRates.effectiveFee * 100),
+                          })}
+                        </span>
+                      </div>
+                      <div className="text-sm text-green-700">{t("result.netAfterFee")} {tierRates.memberEffectiveEarnings.toFixed(2)}€/{hourLabel}</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-bold mb-2">{t("result.internalValue")}</div>
+                    <div className="text-2xl font-bold">{tierRates.internalRate.toFixed(2)}€</div>
+                    <div className="mt-2 text-sm text-gray-600">
+                      <span className="group relative cursor-help">
+                        {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(MEMBER_INTERNAL_DISCOUNT * 100) })}
+                        <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                          {t("result.internalTooltip")}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">{t("result.noMarginNoVat")}</div>
+                  </>
+                )}
+              </div>
+
+              {internalMode && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="font-bold mb-2">{t("result.valueRange")}</div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm">{t("result.minimum")}</div>
+                      <div className="font-bold">{tierRates.internalRate.toFixed(2)}€</div>
+                    </div>
+                    <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
+                    <div>
+                      <div className="text-sm">{t("result.maximum")}</div>
+                      <div className="font-bold">{tierRates.clientTotal.toFixed(2)}€</div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -731,124 +840,6 @@ Internal:
                     <li key={index} className="text-sm">{step}</li>
                   ))}
                 </ol>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <h4 className="text-lg font-bold mb-2">{t("result.serviceOptions")}</h4>
-              <div className="p-4 bg-gray-100 rounded border">
-                <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-                  <div className="font-bold mb-1">{t("result.selectedWorkTier")}</div>
-                  <div className="text-lg">{workTierInfo[workTier].label} (×{WORK_TIER_MULTIPLIERS[workTier]})</div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {workTier === 'execution' && t("tier.baseRate")}
-                    {workTier === 'guidance' && t("tier.guidance50")}
-                    {workTier === 'advisory' && t("tier.advisory100")}
-                  </div>
-                </div>
-
-                {internalMode && (
-                  <div className="mb-4">
-                    <div className="font-bold mb-2">{t("result.serviceType")}</div>
-                    <div className="flex space-x-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="serviceType"
-                          value="internal"
-                          checked={serviceType === "internal"}
-                          onChange={() => setServiceType("internal")}
-                          className="mr-2"
-                        />
-                        {t("result.internal")} (-{Math.round(MEMBER_INTERNAL_DISCOUNT * 100)}%)
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="serviceType"
-                          value="commercial"
-                          checked={serviceType === "commercial"}
-                          onChange={() => setServiceType("commercial")}
-                          className="mr-2"
-                        />
-                        {t("result.commercial")} (+{Math.round(COOP_MARGIN * 100)}% {t("result.margin")} + {vatLabel})
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-4 pt-4 border-t">
-                  {serviceType === "commercial" ? (
-                    <>
-                      <div className="font-bold mb-3">{t("result.breakdown")}</div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>{t("result.memberRate")}</span>
-                          <span className="font-medium">{tierRates.memberRate.toFixed(2)}€</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span className="group relative cursor-help">
-                            + {t("result.coopMargin")} ({Math.round(COOP_MARGIN * 100)}%)
-                            <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                              {t("result.coopMarginTooltip", { pct: Math.round(COOP_MARGIN * 100) })}
-                            </span>
-                          </span>
-                          <span>{tierRates.coopMarginAmount.toFixed(2)}€</span>
-                        </div>
-                        <div className="flex justify-between border-t pt-1">
-                          <span>{t("result.subtotal")}</span>
-                          <span className="font-medium">{tierRates.clientBeforeVAT.toFixed(2)}€</span>
-                        </div>
-                        {tierRates.vatAmount > 0 && (
-                          <div className="flex justify-between text-gray-600">
-                            <span>+ {vatLabel} ({Math.round(CLIENT_VAT_RATES[clientCountry].rate * 100)}%)</span>
-                            <span>{tierRates.vatAmount.toFixed(2)}€</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between border-t pt-1 text-lg font-bold">
-                          <span>{t("result.clientPays")}</span>
-                          <span>{tierRates.clientTotal.toFixed(2)}€</span>
-                        </div>
-                      </div>
-                      <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-                        <div className="font-bold text-green-800">{t("result.memberEarns")} {tierRates.memberRate.toFixed(2)}€/{hourLabel}</div>
-                        <div className="text-sm text-green-700">{t("result.effectiveFee")} {Math.round(tierRates.effectiveFee * 100)}% {t("result.afterVatRecovery")}</div>
-                        <div className="text-sm text-green-700">{t("result.netAfterFee")} {tierRates.memberEffectiveEarnings.toFixed(2)}€/{hourLabel}</div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="font-bold mb-2">{t("result.internalValue")}</div>
-                      <div className="text-2xl font-bold">{tierRates.internalRate.toFixed(2)}€</div>
-                      <div className="mt-2 text-sm text-gray-600">
-                        <span className="group relative cursor-help">
-                          {t("result.memberRateWith", { rate: tierRates.memberRate.toFixed(2), pct: Math.round(MEMBER_INTERNAL_DISCOUNT * 100) })}
-                          <span className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                            {t("result.internalTooltip")}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-500 mt-1">{t("result.noMarginNoVat")}</div>
-                    </>
-                  )}
-                </div>
-
-                {internalMode && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="font-bold mb-2">{t("result.valueRange")}</div>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm">{t("result.minimum")}</div>
-                        <div className="font-bold">{tierRates.internalRate.toFixed(2)}€</div>
-                      </div>
-                      <div className="h-1 bg-gray-300 flex-1 mx-4 rounded-full"></div>
-                      <div>
-                        <div className="text-sm">{t("result.maximum")}</div>
-                        <div className="font-bold">{tierRates.clientTotal.toFixed(2)}€</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
