@@ -42,7 +42,6 @@ const CLIENT_VAT_RATES: Record<string, { rate: number; label: string }> = {
 const WORK_TIER_MULTIPLIERS = {
   execution: 1.0,
   guidance: 1.5,
-  advisory: 2.0,
 };
 
 const HourlyCalculator = () => {
@@ -90,7 +89,6 @@ const HourlyCalculator = () => {
   const workTierInfo = {
     execution: { label: t("tier.execution.label"), description: t("tier.execution.desc") },
     guidance: { label: t("tier.guidance.label"), description: t("tier.guidance.desc") },
-    advisory: { label: t("tier.advisory.label"), description: t("tier.advisory.desc") },
   };
 
   // Keypress listener for "D" key to toggle internal mode

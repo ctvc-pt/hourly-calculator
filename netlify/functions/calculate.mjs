@@ -43,7 +43,7 @@ const CLIENT_VAT_RATES = {
   EU_RC: 0, NON_EU: 0,
 };
 
-const WORK_TIER_MULTIPLIERS = { execution: 1.0, guidance: 1.5, advisory: 2.0 };
+const WORK_TIER_MULTIPLIERS = { execution: 1.0, guidance: 1.5 };
 
 function seniorityBonus(seniority, iash) {
   const s = Math.min(seniority, MAX_SENIORITY);

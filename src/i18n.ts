@@ -35,18 +35,13 @@ const translations = {
   // Work Tiers
   "tier.execution.label": { en: "Execution", pt: "Execução" },
   "tier.execution.desc": {
-    en: "Hands-on creation and delivery. The professional directly produces the work themselves — whether that's designing, building, writing, researching, or implementing. The focus is on delivering concrete outputs. The client provides goals; the professional delivers the artefacts. Responsibility is on the professional for the quality of the work, not the broader process or strategy.",
-    pt: "Criação e entrega direta. O profissional produz o trabalho diretamente — seja design, construção, escrita, investigação ou implementação. O foco está na entrega de resultados concretos. O cliente define os objetivos; o profissional entrega os artefactos. A responsabilidade é do profissional pela qualidade do trabalho, não pelo processo ou estratégia."
+    en: "Hands-on delivery. The professional does the work themselves — designs, builds, writes, implements. The client sets the goal; the professional ships it and owns its quality.",
+    pt: "Entrega direta. O profissional faz o trabalho — desenha, constrói, escreve, implementa. O cliente define o objetivo; o profissional entrega e responde pela qualidade."
   },
-  "tier.guidance.label": { en: "Guidance & Audit", pt: "Orientação & Auditoria" },
+  "tier.guidance.label": { en: "Guidance", pt: "Orientação" },
   "tier.guidance.desc": {
-    en: "Expert direction, feedback, and quality assurance. The professional is not executing the tasks. Instead, they guide the team on how to do the work effectively, review what is produced, identify gaps, and ensure quality and alignment. This tier covers mentoring, critique, audits, design/architecture direction, and elevating the team's execution. The client owns the hands-on work; the professional owns the clarity and standards.",
-    pt: "Direção especializada, feedback e garantia de qualidade. O profissional não executa as tarefas. Em vez disso, orienta a equipa sobre como trabalhar eficazmente, revê o que é produzido, identifica lacunas e assegura qualidade e alinhamento. Este nível cobre mentoria, crítica, auditorias, direção de design/arquitetura e elevação da execução da equipa. O cliente é responsável pela execução; o profissional pela clareza e standards."
-  },
-  "tier.advisory.label": { en: "Advisory", pt: "Consultoria" },
-  "tier.advisory.desc": {
-    en: "Strategic partnership with accountability. At this level, the professional acts as an advisor who helps steer decisions, priorities, and direction. The team checks in with them, not for task updates, but for alignment with broader goals — whether strategic, organisational, design, or product-related. Their role is to bring pattern-recognition, experience, and judgment, helping the client avoid mistakes and move with intention. This is the highest-leverage tier: the client remains in control of execution, but the professional holds them accountable to the direction they define together.",
-    pt: "Parceria estratégica com responsabilização. Neste nível, o profissional atua como consultor que ajuda a orientar decisões, prioridades e direção. A equipa consulta-o não para atualizações de tarefas, mas para alinhamento com objetivos mais amplos — estratégicos, organizacionais, de design ou de produto. O seu papel é trazer reconhecimento de padrões, experiência e julgamento, ajudando o cliente a evitar erros e a agir com intenção. Este é o nível de maior alavancagem: o cliente mantém o controlo da execução, mas o profissional responsabiliza-o pela direção que definem em conjunto."
+    en: "Direction, judgment, and standards — not hands-on delivery. The professional steers decisions, reviews what's produced, surfaces gaps, and aligns the work with broader goals. Covers mentoring, critique, design and architecture direction, and strategic input. The client owns the doing; the professional owns the call on what good looks like and where things are heading.",
+    pt: "Direção, critério e standards — não execução direta. O profissional orienta decisões, revê o que é produzido, identifica lacunas e alinha o trabalho com objetivos mais amplos. Cobre mentoria, crítica, direção de design e arquitetura, e input estratégico. O cliente executa; o profissional define o que é qualidade e para onde se vai."
   },
   "result.clientLabel": { en: "To charge the client", pt: "A cobrar ao cliente" },
   "result.vatIncluded": { en: "VAT included", pt: "IVA incluído" },

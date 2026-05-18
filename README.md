@@ -37,7 +37,7 @@ All fields optional. Defaults match the React UI's defaults (2026 IAS, π/√2 f
 ```
 
 - `academicQualification`: `"none" | "bachelor" | "master" | "phd"`
-- `workTier`: `"execution" | "guidance" | "advisory"` (×1.0 / ×1.5 / ×2.0)
+- `workTier`: `"execution" | "guidance"` (×1.0 / ×1.5)
 - `serviceType`: `"commercial" | "internal"` (which figure to use as `primary`)
 - `clientCountry`: VAT country (`PT`, `ES`, `FR`, `DE`, `IT`, `NL`, `BE`, `IE`, `UK`, `EU_RC`, `NON_EU`)
 - `internalMode` gates the intern discount; outside internal mode the discount does not apply.
