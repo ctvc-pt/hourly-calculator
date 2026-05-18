@@ -1,6 +1,17 @@
 [build]
   command = "npm run build"
   publish = "build"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Friendly alias: /api/calculate → /.netlify/functions/calculate
+[[redirects]]
+  from = "/api/calculate"
+  to = "/.netlify/functions/calculate"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
